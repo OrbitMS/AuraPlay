@@ -1,4 +1,3 @@
-import React from 'react';
 import { AudioProvider } from './context/AudioContext';
 import { SearchView } from './views/SearchView';
 import { AudioPlayerBar } from './components/AudioPlayerBar';
