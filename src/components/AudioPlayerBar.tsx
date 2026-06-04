@@ -57,30 +57,35 @@ export const AudioPlayerBar: React.FC = () => {
   };
 
   return (
-    <div className="h-[72px] bg-[var(--obsidian)] border-t border-[var(--bd)] flex items-center justify-between px-6 select-none flex-shrink-0 z-10 relative">
-      
-      {/* Left Section: Track Metadata Info */}
-      <div className="w-[30%] flex items-center gap-3 min-w-0">
+    <div className="h-[80px] bg-[rgba(8,8,10,0.97)] border-t border-[rgba(201,168,76,0.1)] flex items-center px-7 select-none flex-shrink-0 z-10 relative">
+      {/* Gold accent line across the top */}
+      <div className="absolute top-0 left-[10%] right-[10%] h-px bg-gradient-to-r from-transparent via-[rgba(201,168,76,0.25)] to-transparent"></div>
+
+      {/* Left Section: Now Playing */}
+      <div className="w-[26%] flex items-center gap-3 min-w-0">
         {currentTrack ? (
           <>
-            <img 
-              src={currentTrack.thumbnail || ''} 
-              alt="" 
-              className="w-9 h-9 rounded-[4px] object-cover border border-[var(--bd)] flex-shrink-0 bg-[var(--s2)] animate-fade-in"
-            />
+            <div className="w-[46px] h-[46px] rounded-full flex-shrink-0 relative overflow-hidden border-2 border-[rgba(201,168,76,0.25)]">
+              <img
+                src={currentTrack.thumbnail || ''}
+                alt=""
+                className={`w-full h-full object-cover rounded-full ${isPlaying ? 'animate-spin-slow' : ''}`}
+              />
+              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[9px] h-[9px] rounded-full bg-[var(--obsidian)] border border-[rgba(201,168,76,0.3)]"></div>
+            </div>
             <div className="flex flex-col min-w-0">
-              <span className="text-[12px] font-medium tracking-[0.01em] truncate text-[var(--tp)]">
+              <span className="text-[12px] font-semibold tracking-[0.01em] truncate text-[var(--tp)]">
                 {currentTrack.title}
               </span>
-              <span className="text-[10px] tracking-[0.02em] truncate text-[var(--ts)] mt-0.5" style={{ fontFamily: 'var(--fm)' }}>
+              <span className="text-[9px] tracking-[0.07em] uppercase truncate text-[var(--gold)] mt-0.5" style={{ fontFamily: 'var(--fm)' }}>
                 {currentTrack.artist || 'Unknown Artist'}
               </span>
             </div>
           </>
         ) : (
           <>
-            <div className="w-9 h-9 rounded-[4px] border border-dashed border-[var(--bd)] flex-shrink-0 bg-[var(--s1)] flex items-center justify-center">
-              <svg viewBox="0 0 24 24" fill="none" stroke="var(--tt)" strokeWidth="1.2" className="w-3.5 h-3.5">
+            <div className="w-[46px] h-[46px] rounded-full border-2 border-dashed border-[var(--bd)] flex-shrink-0 bg-[var(--s1)] flex items-center justify-center">
+              <svg viewBox="0 0 24 24" fill="none" stroke="var(--tt)" strokeWidth="1.2" className="w-4 h-4">
                 <circle cx="9" cy="18" r="3"/><circle cx="18" cy="15" r="3"/><line x1="12" y1="18" x2="12" y2="5"/><polyline points="12 5 21 3 21 15"/>
               </svg>
             </div>
@@ -94,7 +99,7 @@ export const AudioPlayerBar: React.FC = () => {
       </div>
 
       {/* Center Section: Playback Mechanism Controls */}
-      <div className="flex-1 max-w-[460px] flex flex-col items-center gap-2">
+      <div className="flex-1 flex flex-col items-center gap-2">
         <div className="flex items-center gap-5">
           {/* Shuffle Toggle */}
           <button 
@@ -119,14 +124,14 @@ export const AudioPlayerBar: React.FC = () => {
           {/* Play / Pause Toggle Trigger */}
           <button 
             onClick={togglePlay}
-            className="w-7 h-7 rounded-full bg-[var(--tp)] text-[var(--obsidian)] flex items-center justify-center cursor-pointer hover:bg-[var(--gold-b)] hover:scale-105 active:scale-95 transition-all shadow-sm flex-shrink-0"
+            className="w-10 h-10 rounded-full bg-gradient-to-br from-[var(--gold-b)] to-[var(--gold)] text-[var(--obsidian)] flex items-center justify-center cursor-pointer hover:scale-[1.06] active:scale-95 transition-transform flex-shrink-0 shadow-[0_0_18px_rgba(201,168,76,0.2)]"
           >
             {isPlaying ? (
-              <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" strokeWidth="2">
-                <rect x="3" y="4" width="4" height="16"/><rect x="17" y="4" width="4" height="16"/>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" strokeWidth="2">
+                <rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/>
               </svg>
             ) : (
-              <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="ml-0.5">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="ml-0.5">
                 <polygon points="5 3 19 12 5 21 5 3"/>
               </svg>
             )}
@@ -159,7 +164,7 @@ export const AudioPlayerBar: React.FC = () => {
         </div>
 
         {/* Slider Timeline Duration Track */}
-        <div className="w-full flex items-center gap-2.5">
+        <div className="w-full max-w-[420px] flex items-center gap-2">
           <span className="text-[9px] text-[var(--tt)] select-none w-7 text-right" style={{ fontFamily: 'var(--fm)' }}>1:24</span>
           <div className="flex-1 h-0.5 bg-[var(--s4)] rounded-full relative cursor-pointer group">
             <div className="h-full w-[35%] bg-[var(--gold)] rounded-full absolute left-0 top-0 group-hover:bg-[var(--gold-b)] transition-colors"></div>
@@ -169,7 +174,7 @@ export const AudioPlayerBar: React.FC = () => {
       </div>
 
       {/* Right Section: Volume Slider Interface */}
-      <div className="w-[30%] flex items-center justify-end gap-2.5">
+      <div className="w-[26%] flex items-center justify-end gap-2">
         <button
           onClick={toggleMute}
           aria-label={volume === 0 ? 'Unmute' : 'Mute'}
@@ -183,7 +188,7 @@ export const AudioPlayerBar: React.FC = () => {
           ) : (
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
               <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
-              <path d="M15.54 8.46a5 5 0 0 1 0 7.07"/>
+              <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/>
             </svg>
           )}
         </button>
@@ -191,15 +196,16 @@ export const AudioPlayerBar: React.FC = () => {
           onPointerDown={handlePointerDown}
           onPointerMove={handlePointerMove}
           onPointerUp={handlePointerUp}
-          className="w-16 py-2 flex items-center cursor-pointer group touch-none"
+          className="w-[72px] py-2 flex items-center cursor-pointer group touch-none"
         >
           <div ref={volumeBarRef} className="w-full h-0.5 bg-[var(--s4)] rounded-full relative">
             <div 
-              className="h-full bg-[var(--ts)] rounded-full absolute left-0 top-0 group-hover:bg-[var(--tp)] transition-colors" 
+              className="h-full bg-[rgba(201,168,76,0.5)] rounded-full absolute left-0 top-0 group-hover:bg-[var(--gold)] transition-colors" 
               style={{ width: `${volume}%` }}
             ></div>
           </div>
         </div>
+        <span className="text-[9px] text-[var(--tt)] select-none min-w-[22px]" style={{ fontFamily: 'var(--fm)' }}>{volume}</span>
       </div>
 
     </div>

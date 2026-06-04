@@ -33,11 +33,18 @@
   --s3: #21212c;
   --s4: #2a2a38;
   --bd: rgba(255, 255, 255, 0.04);
+  --bs: rgba(255, 255, 255, 0.08);
+  --bm: rgba(255, 255, 255, 0.12);
   --gold: #c9a84c;
+  --gold-b: #e8c76a;
   --gold-d: rgba(201, 168, 76, 0.15);
+  --gold-g: rgba(201, 168, 76, 0.07);
   --tp: #f0ede8;
   --ts: #8a8794;
   --tt: #4a4856;
+  --fd: 'DM Serif Display', serif;
+  --fu: 'Syne', sans-serif;
+  --fm: 'DM Mono', monospace;
 }
 
 /* Force the canvas layer to fill the screen entirely with no spill scrollbars */
