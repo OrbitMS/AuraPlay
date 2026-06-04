@@ -1,10 +1,11 @@
-import React, { createContext, useState, useEffect } from 'react';
+import React, { createContext, useState, useEffect, useRef } from 'react';
 import { 
   playTrack as nativePlayTrack, 
   pauseTrack as nativePauseTrack, 
   resumeTrack as nativeResumeTrack,
   setVolume as nativeSetVolume,
-  subscribeToAudioStatus 
+  subscribeToAudioStatus,
+  initAudioPlayer
 } from '../services/youtube';
 
 export interface Track {
@@ -44,15 +45,34 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   const currentTrack = currentIndex >= 0 && currentIndex < queue.length ? queue[currentIndex] : null;
 
+  // Counts tracks skipped due to playback errors so we stop instead of looping
+  // forever when an entire queue is unplayable (e.g. embed-restricted videos).
+  const skipCountRef = useRef(0);
+
+  useEffect(() => {
+    initAudioPlayer();
+  }, []);
+
   useEffect(() => {
     const unlistenFn = subscribeToAudioStatus((state: string) => {
       console.log(`🔊 Audio state update: ${state}`);
       switch (state) {
         case 'playing':
+          skipCountRef.current = 0;
           setIsPlaying(true);
           break;
         case 'paused':
           setIsPlaying(false);
+          break;
+        case 'error':
+          // Skip unplayable tracks, but give up once we've cycled the whole queue.
+          if (queue.length > 0 && skipCountRef.current < queue.length) {
+            skipCountRef.current += 1;
+            nextTrack();
+          } else {
+            console.warn('No playable track found in queue.');
+            setIsPlaying(false);
+          }
           break;
         case 'ended':
           // Auto advance to next song when current finishes
@@ -74,6 +94,7 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   }, [currentIndex, queue, isLooping, isShuffling, currentTrack]);
 
   const playTrack = (track: Track, completePlaylist?: Track[]) => {
+    skipCountRef.current = 0;
     if (completePlaylist && completePlaylist.length > 0) {
       setQueue(completePlaylist);
       const idx = completePlaylist.findIndex(t => t.id === track.id);
@@ -101,30 +122,27 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   };
 
+  const playIndex = (index: number) => {
+    setCurrentIndex(index);
+    setIsPlaying(true);
+    nativePlayTrack(queue[index].id).catch(err => console.error("Playback failed:", err));
+  };
+
   const nextTrack = () => {
     if (queue.length === 0) return;
-    
+
     if (isShuffling) {
-      const randomIndex = Math.floor(Math.random() * queue.length);
-      setCurrentIndex(randomIndex);
+      playIndex(Math.floor(Math.random() * queue.length));
       return;
     }
 
-    if (currentIndex < queue.length - 1) {
-      setCurrentIndex(prev => prev + 1);
-    } else {
-      // Loop back to start of album if at the end
-      setCurrentIndex(0);
-    }
+    // Loop back to start of album if at the end
+    playIndex(currentIndex < queue.length - 1 ? currentIndex + 1 : 0);
   };
 
   const prevTrack = () => {
     if (queue.length === 0) return;
-    if (currentIndex > 0) {
-      setCurrentIndex(prev => prev - 1);
-    } else {
-      setCurrentIndex(queue.length - 1); // Wrap to end
-    }
+    playIndex(currentIndex > 0 ? currentIndex - 1 : queue.length - 1); // Wrap to end
   };
 
   const stopTrack = () => {

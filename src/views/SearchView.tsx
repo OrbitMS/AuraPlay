@@ -1,6 +1,6 @@
 import React, { useState, useContext } from 'react';
 import { searchMusic } from '../services/youtube';
-import { AudioContext } from '../context/AudioContext';
+import { AudioContext, Track } from '../context/AudioContext';
 import { Search } from 'lucide-react';
 
 export const SearchView: React.FC = () => {
@@ -8,9 +8,8 @@ export const SearchView: React.FC = () => {
   const [results, setResults] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [zoom, setZoom] = useState(1);
-  
-  // Safely access context
   const audioContext = useContext(AudioContext);
+  const currentTrackId = audioContext?.currentTrack?.id;
 
   const handleWheel = (e: React.WheelEvent) => {
     const delta = e.deltaY > 0 ? -0.05 : 0.05;
@@ -25,7 +24,6 @@ export const SearchView: React.FC = () => {
       setResults(songs);
     } catch (error) {
       console.error("Search failure:", error);
-      // Optional: Add a UI notification here
     } finally {
       setIsLoading(false);
     }
@@ -36,19 +34,22 @@ export const SearchView: React.FC = () => {
     executeSearch(query);
   };
 
+  const playSong = (song: any) => {
+    const tracks: Track[] = results.map((s) => ({
+      id: s.id,
+      title: s.name,
+      artist: s.artists?.[0]?.name || 'Unknown Artist',
+      thumbnail: s.thumbnails?.[0]?.url || '',
+    }));
+    const track = tracks.find((t) => t.id === song.id);
+    if (track) audioContext?.playTrack(track, tracks);
+  };
+
   return (
     <div onWheel={handleWheel} className="p-[32px] w-full origin-top-left transition-transform duration-100" style={{ transform: `scale(${zoom})` }}>
       <form onSubmit={handleSearch} className="flex items-center gap-3 bg-[var(--s1)] border border-[var(--bd)] rounded-[6px] p-[6px_12px] max-w-[360px] mb-8">
-        <input 
-          type="text" 
-          value={query} 
-          onChange={(e) => setQuery(e.target.value)} 
-          placeholder="Search..." 
-          className="bg-transparent text-[12px] text-[var(--tp)] outline-none w-full" 
-        />
-        <button type="submit" disabled={isLoading}>
-          <Search size={14} className="text-[var(--tt)]" />
-        </button>
+        <input type="text" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search..." className="bg-transparent text-[12px] text-[var(--tp)] outline-none w-full" />
+        <button type="submit" disabled={isLoading}><Search size={14} className="text-[var(--tt)]" /></button>
       </form>
 
       {/* Grid Headers */}
@@ -60,10 +61,10 @@ export const SearchView: React.FC = () => {
 
       <div className="flex flex-col gap-1">
         {results.map((song, idx) => (
-          <div key={song.id} className="grid grid-cols-[30px_1fr_160px_40px] gap-[14px] items-center px-2 py-2 rounded-[5px] cursor-pointer hover:bg-white/[0.02]">
+          <div key={song.id} onClick={() => playSong(song)} className={`grid grid-cols-[30px_1fr_160px_40px] gap-[14px] items-center px-2 py-2 rounded-[5px] cursor-pointer hover:bg-white/[0.02] ${currentTrackId === song.id ? 'bg-white/[0.04]' : ''}`}>
             <span className="text-[10px] text-[var(--tt)] font-mono">{idx + 1}</span>
             <div className="flex items-center gap-3 overflow-hidden">
-              <img src={song.thumbnails?.[0]?.url} className="w-8 h-8 rounded-[4px]" alt="cover" />
+              <img src={song.thumbnails?.[0]?.url} className="w-8 h-8 rounded-[4px]" />
               <span className="text-[12px] text-[var(--tp)] truncate">{song.name}</span>
             </div>
             <span className="text-[10px] text-[var(--ts)] truncate font-mono">{song.artists?.[0]?.name}</span>
