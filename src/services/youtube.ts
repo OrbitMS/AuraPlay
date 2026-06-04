@@ -1,6 +1,5 @@
 import { Innertube, UniversalCache } from 'youtubei.js';
 import { fetch as tauriFetch } from '@tauri-apps/plugin-http';
-import { emit } from '@tauri-apps/api/event';
 
 let yt: Innertube | null = null;
 
@@ -90,36 +89,105 @@ export async function searchMusic(query: string) {
 }
 
 // ============================================================================
-// DOM-BASED AUDIO PLAYER PIPELINE
+// YOUTUBE IFRAME PLAYER
 // ============================================================================
+// Playback uses the YouTube IFrame Player API loaded into a hidden #yt-player
+// element in the main window. This gives programmatic play/pause/volume control
+// and real playback-state events, which the previous DOM-iframe approach lacked.
+
+type AudioState = 'playing' | 'paused' | 'ended' | 'buffering' | 'error';
+
+let player: any = null;
+let playerReady = false;
+let pendingVideoId: string | null = null;
+const statusListeners = new Set<(state: AudioState) => void>();
+
+function notifyStatus(state: AudioState) {
+  statusListeners.forEach((cb) => cb(state));
+}
+
+function ensurePlayer(): void {
+  if (player || typeof window === 'undefined') return;
+
+  const create = () => {
+    const YT = (window as any).YT;
+    if (!YT || !YT.Player) return;
+    player = new YT.Player('yt-player', {
+      height: '0',
+      width: '0',
+      playerVars: { autoplay: 1, controls: 0, playsinline: 1, origin: window.location.origin, enablejsapi: 1 },
+      events: {
+        onReady: () => {
+          playerReady = true;
+          if (pendingVideoId) {
+            player.loadVideoById(pendingVideoId);
+            pendingVideoId = null;
+          }
+        },
+        onStateChange: (event: any) => {
+          const State = (window as any).YT.PlayerState;
+          switch (event.data) {
+            case State.PLAYING: notifyStatus('playing'); break;
+            case State.PAUSED: notifyStatus('paused'); break;
+            case State.ENDED: notifyStatus('ended'); break;
+            case State.BUFFERING: notifyStatus('buffering'); break;
+          }
+        },
+        // Error codes 100/101/150 mean the video is unavailable or its owner
+        // disabled embedded playback (common for official YouTube Music tracks).
+        onError: (event: any) => {
+          console.error('YT player error code:', event && event.data);
+          notifyStatus('error');
+        },
+      },
+    });
+  };
+
+  if ((window as any).YT && (window as any).YT.Player) {
+    create();
+  } else {
+    (window as any).onYouTubeIframeAPIReady = create;
+    const tag = document.createElement('script');
+    tag.src = 'https://www.youtube.com/iframe_api';
+    document.head.appendChild(tag);
+  }
+}
+
+export function initAudioPlayer(): void {
+  ensurePlayer();
+}
 
 export async function playTrack(videoId: string): Promise<void> {
-  console.log(`🎬 Updating DOM iframe target source link for ID: ${videoId}`);
-  
-  const iframe = document.getElementById('native-audio-frame') as HTMLIFrameElement;
-  if (iframe) {
-    // Setting our origin parameter forces YouTube to trust our local Vite platform context
-    iframe.src = `https://www.youtube.com/embed/${videoId}?autoplay=1&controls=0&playsinline=1&origin=http://localhost:1420`;
+  ensurePlayer();
+  if (player && playerReady) {
+    player.loadVideoById(videoId);
   } else {
-    console.error("Audio target iframe container could not be found in active DOM context.");
+    pendingVideoId = videoId;
   }
 }
 
 export async function pauseTrack(): Promise<void> {
-  const iframe = document.getElementById('native-audio-frame') as HTMLIFrameElement;
-  if (iframe) iframe.src = 'about:blank'; // Instantly clears and tears down the media stream context
+  if (player && playerReady) player.pauseVideo();
 }
 
-export async function resumeTrack(): Promise<void> {}
-export async function setTrackVolume(volume: number): Promise<void> {}
+export async function resumeTrack(): Promise<void> {
+  if (player && playerReady) player.playVideo();
+}
+
+export async function setTrackVolume(volume: number): Promise<void> {
+  if (player && playerReady) player.setVolume(volume);
+}
+
 export function subscribeToAudioStatus(callback: (state: string) => void) {
-  return () => {};
+  const listener = callback as (state: AudioState) => void;
+  statusListeners.add(listener);
+  return () => { statusListeners.delete(listener); };
 }
 
 export const setVolume = async (volume: number) => {
-  await emit('audio-control', { command: 'set_volume', volume });
+  await setTrackVolume(volume);
 };
 
-export async function getAudioStreamUrl(videoId: string): Promise<string> {
+export async function getAudioStreamUrl(_videoId: string): Promise<string> {
   return "";
 }

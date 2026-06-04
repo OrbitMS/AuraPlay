@@ -10,12 +10,10 @@
   <body>
     <div id="root"></div>
 
-    <iframe 
-      id="native-audio-frame"
-      style="display: none; width: 0; height: 0;"
-      src="/index-player.html"
-      allow="autoplay">
-    </iframe>
+    <!-- Off-screen mount point; the YouTube IFrame Player API replaces this with its player iframe.
+         YouTube refuses to play in a zero-size/visibility:hidden iframe, so it is rendered at a real
+         size but positioned off-screen instead of hidden. -->
+    <div id="yt-player" style="position: fixed; left: -10000px; top: 0; width: 320px; height: 180px; border: 0; pointer-events: none;"></div>
 
     <script type="module" src="/src/main.tsx"></script>
   </body>
