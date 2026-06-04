@@ -1,9 +1,11 @@
-import React, { useContext, useState } from 'react';
+import React, { useContext, useRef } from 'react';
 import { AudioContext } from '../context/AudioContext';
 
 export const AudioPlayerBar: React.FC = () => {
   const audioContext = useContext(AudioContext);
-  const [volume] = useState(75);
+  const volumeBarRef = useRef<HTMLDivElement>(null);
+  const draggingRef = useRef(false);
+  const prevVolumeRef = useRef(70);
 
   if (!audioContext) return null;
 
@@ -16,8 +18,43 @@ export const AudioPlayerBar: React.FC = () => {
     isShuffling, 
     isLooping, 
     setShuffling, 
-    setLooping 
+    setLooping,
+    volume,
+    setVolume
   } = audioContext;
+
+  const setVolumeFromClientX = (clientX: number) => {
+    const bar = volumeBarRef.current;
+    if (!bar) return;
+    const rect = bar.getBoundingClientRect();
+    if (rect.width === 0) return;
+    const pct = Math.round(Math.min(Math.max((clientX - rect.left) / rect.width, 0), 1) * 100);
+    setVolume(pct);
+  };
+
+  const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    e.currentTarget.setPointerCapture(e.pointerId);
+    draggingRef.current = true;
+    setVolumeFromClientX(e.clientX);
+  };
+
+  const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (draggingRef.current) setVolumeFromClientX(e.clientX);
+  };
+
+  const handlePointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
+    draggingRef.current = false;
+    e.currentTarget.releasePointerCapture(e.pointerId);
+  };
+
+  const toggleMute = () => {
+    if (volume > 0) {
+      prevVolumeRef.current = volume;
+      setVolume(0);
+    } else {
+      setVolume(prevVolumeRef.current || 70);
+    }
+  };
 
   return (
     <div className="h-[72px] bg-[var(--obsidian)] border-t border-[var(--bd)] flex items-center justify-between px-6 select-none flex-shrink-0 z-10 relative">
@@ -128,17 +165,35 @@ export const AudioPlayerBar: React.FC = () => {
 
       {/* Right Section: Volume Slider Interface */}
       <div className="w-[30%] flex items-center justify-end gap-2.5">
-        <button className="bg-none border-none p-0 cursor-pointer text-[var(--tt)] hover:text-[var(--ts)] transition-colors">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-            <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
-            <path d="M15.54 8.46a5 5 0 0 1 0 7.07"/>
-          </svg>
+        <button
+          onClick={toggleMute}
+          aria-label={volume === 0 ? 'Unmute' : 'Mute'}
+          className="bg-none border-none p-0 cursor-pointer text-[var(--tt)] hover:text-[var(--ts)] transition-colors"
+        >
+          {volume === 0 ? (
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+              <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
+              <line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/>
+            </svg>
+          ) : (
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+              <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
+              <path d="M15.54 8.46a5 5 0 0 1 0 7.07"/>
+            </svg>
+          )}
         </button>
-        <div className="w-16 h-0.5 bg-[var(--s4)] rounded-full relative cursor-pointer group">
-          <div 
-            className="h-full bg-[var(--ts)] rounded-full absolute left-0 top-0 group-hover:bg-[var(--tp)] transition-colors" 
-            style={{ width: `${volume}%` }}
-          ></div>
+        <div
+          onPointerDown={handlePointerDown}
+          onPointerMove={handlePointerMove}
+          onPointerUp={handlePointerUp}
+          className="w-16 py-2 flex items-center cursor-pointer group touch-none"
+        >
+          <div ref={volumeBarRef} className="w-full h-0.5 bg-[var(--s4)] rounded-full relative">
+            <div 
+              className="h-full bg-[var(--ts)] rounded-full absolute left-0 top-0 group-hover:bg-[var(--tp)] transition-colors" 
+              style={{ width: `${volume}%` }}
+            ></div>
+          </div>
         </div>
       </div>
 
