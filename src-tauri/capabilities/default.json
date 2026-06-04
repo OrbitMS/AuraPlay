@@ -4,16 +4,17 @@
   "description": "Capability for the main window",
   "windows": ["main"],
   "permissions": [
+    "event:default",
     "core:default",
     "opener:default",
     "http:default",
     {
       "identifier": "http:default",
       "allow": [
-        { 
+        {
           "url": "https://*.youtube.com/*"
         },
-        { 
+        {
           "url": "https://*.googleapis.com/*"
         },
         {

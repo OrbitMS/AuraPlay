@@ -1,7 +1,7 @@
-import React, { useState, useContext, useEffect } from 'react';
+import React, { useState, useContext } from 'react';
 import { searchMusic } from '../services/youtube';
 import { AudioContext, Track } from '../context/AudioContext';
-import { Search, Music } from 'lucide-react';
+import { Search } from 'lucide-react';
 
 export const SearchView: React.FC = () => {
   const [query, setQuery] = useState('');
@@ -49,7 +49,7 @@ export const SearchView: React.FC = () => {
     <div onWheel={handleWheel} className="p-[32px] w-full origin-top-left transition-transform duration-100" style={{ transform: `scale(${zoom})` }}>
       <form onSubmit={handleSearch} className="flex items-center gap-3 bg-[var(--s1)] border border-[var(--bd)] rounded-[6px] p-[6px_12px] max-w-[360px] mb-8">
         <input type="text" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search..." className="bg-transparent text-[12px] text-[var(--tp)] outline-none w-full" />
-        <button type="submit"><Search size={14} className="text-[var(--tt)]" /></button>
+        <button type="submit" disabled={isLoading}><Search size={14} className="text-[var(--tt)]" /></button>
       </form>
 
       {/* Grid Headers */}
