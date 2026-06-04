@@ -1,36 +1,28 @@
-<script>
-  let player = null;
-  let isReady = false;
-  let commandQueue = [];
+import { listen, emit } from '@tauri-apps/api/event';
 
-  window.onYouTubeIframeAPIReady = function() {
-    player = new YT.Player('yt-player', {
-      height: '1', width: '1',
-      events: {
-        'onReady': (event) => {
-          isReady = true;
-          // Process queued commands
-          while (commandQueue.length > 0) {
-            processCommand(commandQueue.shift());
-          }
-        }
+let player;
+// Inject YouTube API
+const tag = document.createElement('script');
+tag.src = "https://www.youtube.com/iframe_api";
+document.head.appendChild(tag);
+
+window.onYouTubeIframeAPIReady = () => {
+  player = new YT.Player('yt-player', {
+    height: '1', width: '1',
+    events: {
+      'onReady': () => {
+        listen('audio-control', (e) => {
+          const { command, videoId, volume } = e.payload;
+          if (command === 'play') player.loadVideoById(videoId);
+          else if (command === 'pause') player.pauseVideo();
+          else if (command === 'resume') player.playVideo();
+          else if (command === 'set_volume') player.setVolume(volume);
+        });
+      },
+      'onStateChange': (event) => {
+        if (event.data === YT.PlayerState.PLAYING) emit('audio-status', { state: 'playing' });
+        if (event.data === YT.PlayerState.PAUSED) emit('audio-status', { state: 'paused' });
       }
-    });
-  };
-
-  function processCommand(payload) {
-    if (!payload || !player) return;
-    const { command, videoId } = payload;
-    if (command === 'play') player.loadVideoById({ videoId });
-    // ... handle other commands
-  }
-
-  // Inside the listen('audio-control') block:
-  listen('audio-control', (e) => {
-    if (!isReady) {
-      commandQueue.push(e.payload);
-    } else {
-      processCommand(e.payload);
     }
   });
-</script>
+};
