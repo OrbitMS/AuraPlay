@@ -1,7 +1,28 @@
-# Tauri + React + Typescript
+# Metrolist Desktop
 
-This template should help get you started developing with Tauri, React and Typescript in Vite.
+Metrolist is a lightweight, cross-platform desktop music player that brings your favorite music library to your desktop without the bloat of a web browser.
 
-## Recommended IDE Setup
+## Features
+* **Search Integration**: Unified search across music sources using `youtubei.js`.
+* **Native Desktop Controls**: Play, pause, resume, and volume management via system IPC.
+* **Resource Efficient**: Built with Tauri v2 for a small memory footprint and high performance.
+* **Modern UI**: Styled with Tailwind CSS for a sleek, responsive interface.
 
-- [VS Code](https://code.visualstudio.com/) + [Tauri](https://marketplace.visualstudio.com/items?itemName=tauri-apps.tauri-vscode) + [rust-analyzer](https://marketplace.visualstudio.com/items?itemName=rust-lang.rust-analyzer)
+## Prerequisites
+* [Node.js](https://nodejs.org/) (v18+)
+* [Rust](https://www.rust-lang.org/tools/install) (latest stable)
+* [Tauri CLI](https://tauri.app/v1/guides/getting-started/prerequisites/)
+
+## Getting Started
+1. **Clone the repository:**
+   ```bash
+   git clone [https://github.com/MSCheckPoint/metrolist-desktop.git](https://github.com/MSCheckPoint/metrolist-desktop.git)
+   cd metrolist-desktop
+
+## Tech Stack
+- **Frontend**: React 19, Tailwind CSS
+- **Desktop Layer**: Tauri v2
+- **API Service**: youtubei.js
+
+## License
+MIT
