@@ -41,7 +41,7 @@
 }
 
 /* Force the canvas layer to fill the screen entirely with no spill scrollbars */
-html, body {
+html, body, #root {
   margin: 0;
   padding: 0;
   width: 100%;
