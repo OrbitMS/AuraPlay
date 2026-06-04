@@ -16,9 +16,9 @@ export const AudioPlayerBar: React.FC = () => {
     nextTrack, 
     prevTrack, 
     isShuffling, 
-    isLooping, 
+    repeatMode, 
     setShuffling, 
-    setLooping,
+    cycleRepeat,
     volume,
     setVolume
   } = audioContext;
@@ -134,7 +134,7 @@ export const AudioPlayerBar: React.FC = () => {
 
           {/* Next Track */}
           <button 
-            onClick={nextTrack}
+            onClick={() => nextTrack()}
             className="bg-transparent border-none cursor-pointer p-0.5 text-[var(--ts)] hover:text-[var(--tp)] transition-colors"
           >
             <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
@@ -142,14 +142,19 @@ export const AudioPlayerBar: React.FC = () => {
             </svg>
           </button>
 
-          {/* Loop Toggle */}
+          {/* Repeat Toggle: off -> all -> one */}
           <button 
-            onClick={() => setLooping(!isLooping)}
-            className={`bg-transparent border-none cursor-pointer p-0.5 transition-colors ${isLooping ? 'text-[var(--gold)]' : 'text-[var(--tt)] hover:text-[var(--ts)]'}`}
+            onClick={cycleRepeat}
+            aria-label={`Repeat: ${repeatMode}`}
+            title={`Repeat: ${repeatMode}`}
+            className={`relative bg-transparent border-none cursor-pointer p-0.5 transition-colors ${repeatMode !== 'off' ? 'text-[var(--gold)]' : 'text-[var(--tt)] hover:text-[var(--ts)]'}`}
           >
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
               <polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/>
             </svg>
+            {repeatMode === 'one' && (
+              <span className="absolute -top-1 -right-1 text-[7px] font-mono font-bold leading-none bg-[var(--gold)] text-[var(--obsidian)] rounded-full w-2.5 h-2.5 flex items-center justify-center">1</span>
+            )}
           </button>
         </div>
 

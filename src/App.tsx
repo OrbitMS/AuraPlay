@@ -6,13 +6,12 @@ import './App.css';
 function App() {
   return (
     <AudioProvider>
-      {/* Centered App Container */}
-      <div className="flex items-center justify-center min-h-screen bg-black p-[20px]">
-        <div className="w-[960px] h-[580px] bg-[var(--void)] border border-[rgba(255,255,255,0.06)] rounded-[12px] overflow-hidden flex flex-col shadow-[0_40px_80px_rgba(0,0,0,0.8)]">
-          
+      {/* Full-window responsive app frame */}
+      <div className="h-screen w-screen bg-[var(--void)] overflow-hidden flex flex-col">
+
           <div className="flex flex-1 min-h-0 overflow-hidden">
             {/* Sidebar */}
-            <div className="w-[200px] flex-shrink-0 bg-[var(--obsidian)] border-r border-[var(--bd)] flex flex-col py-5">
+            <div className="hidden sm:flex w-[180px] lg:w-[220px] flex-shrink-0 bg-[var(--obsidian)] border-r border-[var(--bd)] flex-col py-5">
               <div className="px-4 pb-6 flex items-center gap-2.5">
                 <div className="w-[42px] h-[42px] rounded-[10px] bg-[var(--gold-d)] border border-[rgba(201,168,76,0.2)] flex items-center justify-center">
                   <svg viewBox="0 0 24 24" fill="none" stroke="#c9a84c" strokeWidth="1.8" strokeLinecap="round" className="w-6 h-6">
@@ -34,9 +33,8 @@ function App() {
               <SearchView />
             </main>
           </div>
-          
+
           <AudioPlayerBar />
-        </div>
       </div>
     </AudioProvider>
   );

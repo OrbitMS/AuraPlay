@@ -7,6 +7,7 @@ import {
   subscribeToAudioStatus,
   initAudioPlayer
 } from '../services/youtube';
+import { getNextIndex, cycleRepeatMode, type RepeatMode } from '../lib/queue';
 
 export interface Track {
   id: string;
@@ -15,15 +16,17 @@ export interface Track {
   thumbnail: string;
 }
 
+export type { RepeatMode };
+
 interface AudioContextType {
   currentTrack: Track | null;
   isPlaying: boolean;
   queue: Track[];
   currentIndex: number;
-  isLooping: boolean;
+  repeatMode: RepeatMode;
   isShuffling: boolean;
   volume: number;
-  setLooping: (val: boolean) => void;
+  cycleRepeat: () => void;
   setShuffling: (val: boolean) => void;
   playTrack: (track: Track, completePlaylist?: Track[]) => void;
   togglePlay: () => void;
@@ -39,7 +42,7 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [queue, setQueue] = useState<Track[]>([]);
   const [currentIndex, setCurrentIndex] = useState<number>(-1);
   const [isPlaying, setIsPlaying] = useState(false);
-  const [isLooping, setIsLooping] = useState(false);
+  const [repeatMode, setRepeatMode] = useState<RepeatMode>('off');
   const [isShuffling, setIsShuffling] = useState(false);
   const [volume, setVolumeState] = useState<number>(70); // Initialize standard fallback volume at 70%
 
@@ -76,11 +79,11 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           break;
         case 'ended':
           // Auto advance to next song when current finishes
-          if (isLooping) {
+          if (repeatMode === 'one') {
             // Replay same song
             if (currentTrack) nativePlayTrack(currentTrack.id);
           } else {
-            nextTrack();
+            nextTrack(true);
           }
           break;
         default:
@@ -91,7 +94,7 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     return () => {
       if (typeof unlistenFn === 'function') unlistenFn();
     };
-  }, [currentIndex, queue, isLooping, isShuffling, currentTrack]);
+  }, [currentIndex, queue, repeatMode, isShuffling, currentTrack]);
 
   const playTrack = (track: Track, completePlaylist?: Track[]) => {
     skipCountRef.current = 0;
@@ -128,16 +131,22 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     nativePlayTrack(queue[index].id).catch(err => console.error("Playback failed:", err));
   };
 
-  const nextTrack = () => {
+  // `auto` is true when called from the 'ended' handler (vs. the user clicking
+  // next). With repeat off, the queue stops at the end on auto-advance but a
+  // manual next still wraps to the start.
+  const nextTrack = (auto = false) => {
     if (queue.length === 0) return;
 
-    if (isShuffling) {
-      playIndex(Math.floor(Math.random() * queue.length));
+    const next = getNextIndex(currentIndex, queue.length, { shuffle: isShuffling, repeatMode, auto });
+    if (next === null) {
+      setIsPlaying(false);
       return;
     }
+    playIndex(next);
+  };
 
-    // Loop back to start of album if at the end
-    playIndex(currentIndex < queue.length - 1 ? currentIndex + 1 : 0);
+  const cycleRepeat = () => {
+    setRepeatMode(cycleRepeatMode);
   };
 
   const prevTrack = () => {
@@ -167,10 +176,10 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       isPlaying,
       queue,
       currentIndex,
-      isLooping,
+      repeatMode,
       isShuffling,
       volume,
-      setLooping: setIsLooping,
+      cycleRepeat,
       setShuffling: setIsShuffling,
       playTrack,
       togglePlay,
