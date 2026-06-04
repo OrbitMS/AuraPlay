@@ -47,17 +47,6 @@ export async function getClient() {
 const plainTauriFetch = ((input: RequestInfo | URL, init?: RequestInit) =>
   tauriFetch(input as string, init as any)) as typeof fetch;
 
-// Fetch for the playback client. Unlike the search fetch it does NOT force a
-// desktop User-Agent/Origin, so youtubei.js's per-client identity (IOS,
-// ANDROID_VR, TV, ...) is honored. Forcing a desktop UA on a mobile/TV client
-// makes YouTube reply "This video is unavailable". Only drops the body on GET,
-// which the HTTP layer rejects otherwise.
-const streamFetch = async (input: RequestInfo | URL, init?: RequestInit) => {
-  const options = init ? { ...init } : {};
-  if ((options.method ?? 'GET').toUpperCase() === 'GET') delete (options as { body?: unknown }).body;
-  return tauriFetch(input as string, options as any) as unknown as Response;
-};
-
 // Generates a Proof-of-Origin (po) token via BotGuard. YouTube increasingly
 // rejects stream requests from the web client without one ("Sign in to confirm
 // you're not a bot"). BotGuard runs in this webview's real browser environment.
@@ -99,13 +88,15 @@ async function getStreamClient() {
   if (streamYt) return streamYt;
 
   // A throwaway client gives us the visitor_data that ties the po_token to this session.
-  const seed = await Innertube.create({ fetch: streamFetch, retrieve_player: false });
+  // Uses the same spoofed-header fetch as search; without an Origin/User-Agent the
+  // youtubei v1/player and v1/next calls are rejected by YouTube with HTTP 403.
+  const seed = await Innertube.create({ fetch: innertubeFetch, retrieve_player: false });
   const visitorData = seed.session.context.client.visitorData ?? '';
   const poToken = visitorData ? await generatePoToken(visitorData) : null;
   console.log(`[stream] po_token: ${poToken ? `generated (${poToken.length} chars)` : 'NULL — BotGuard failed, web-client streams will be blocked'}`);
 
   streamYt = await Innertube.create({
-    fetch: streamFetch,
+    fetch: innertubeFetch,
     cache: new UniversalCache(true),
     generate_session_locally: true,
     retrieve_player: true,
@@ -235,7 +226,7 @@ export async function getAudioStreamUrl(videoId: string): Promise<string> {
       const format = info.chooseFormat({ type: 'audio', quality: 'best' });
       const f = format as unknown as { itag?: number; url?: string; signature_cipher?: string; cipher?: string };
       console.log(`[stream] ${c}: itag=${f.itag} hasUrl=${!!f.url} hasSigCipher=${!!f.signature_cipher} hasCipher=${!!f.cipher}`);
-      const url = format.decipher(client.session.player);
+      const url = await format.decipher(client.session.player);
       if (url) {
         console.log(`[stream] ${c}: resolved playable URL`);
         return url;
