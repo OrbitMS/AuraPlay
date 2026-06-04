@@ -1,39 +1,105 @@
 import { Innertube, UniversalCache } from 'youtubei.js';
 import { fetch as tauriFetch } from '@tauri-apps/plugin-http';
+import { BG } from 'bgutils-js';
 
 let yt: Innertube | null = null;
+let streamYt: Innertube | null = null;
+
+// Routes youtubei.js requests through Tauri's HTTP plugin and spoofs the
+// YouTube Music web client so search and stream resolution behave like a browser.
+const innertubeFetch = async (input: RequestInfo | URL, init?: RequestInit) => {
+  const options = init ? { ...init } : {};
+  const rawHeaders: Record<string, string> = {};
+
+  if (options.headers) {
+    if (options.headers instanceof Headers) {
+      options.headers.forEach((value, key) => { rawHeaders[key] = value; });
+    } else if (Array.isArray(options.headers)) {
+      options.headers.forEach(([key, value]) => { rawHeaders[key] = value; });
+    } else {
+      Object.assign(rawHeaders, options.headers);
+    }
+  }
+
+  rawHeaders['User-Agent'] = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36';
+  rawHeaders['Accept'] = '*/*';
+  rawHeaders['Origin'] = 'https://music.youtube.com';
+  rawHeaders['Referer'] = 'https://music.youtube.com/';
+
+  options.headers = rawHeaders;
+  return tauriFetch(input as string, options as any) as unknown as Response;
+};
 
 export async function getClient() {
   if (!yt) {
     yt = await Innertube.create({
-      fetch: async (input, init) => {
-        const options = init ? { ...init } : {};
-        const rawHeaders: Record<string, string> = {};
-        
-        if (options.headers) {
-          if (options.headers instanceof Headers) {
-            options.headers.forEach((value, key) => { rawHeaders[key] = value; });
-          } else if (Array.isArray(options.headers)) {
-            options.headers.forEach(([key, value]) => { rawHeaders[key] = value; });
-          } else {
-            Object.assign(rawHeaders, options.headers);
-          }
-        }
-
-        rawHeaders['User-Agent'] = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36';
-        rawHeaders['Accept'] = '*/*';
-        rawHeaders['Origin'] = 'https://music.youtube.com';
-        rawHeaders['Referer'] = 'https://music.youtube.com/';
-        
-        options.headers = rawHeaders;
-        return tauriFetch(input as string, options as any) as unknown as Response;
-      },
-      cache: new UniversalCache({ storage: 'indexeddb' }), 
+      fetch: innertubeFetch,
+      cache: new UniversalCache(true),
       generate_session_locally: true,
       retrieve_player: false
     });
   }
   return yt;
+}
+
+// Plain Tauri-routed fetch (no spoofed YouTube headers) for BotGuard's calls to
+// Google's attestation endpoints, which are covered by the configured HTTP scope.
+const plainTauriFetch = ((input: RequestInfo | URL, init?: RequestInit) =>
+  tauriFetch(input as string, init as any)) as typeof fetch;
+
+// Generates a Proof-of-Origin (po) token via BotGuard. YouTube increasingly
+// rejects stream requests from the web client without one ("Sign in to confirm
+// you're not a bot"). BotGuard runs in this webview's real browser environment.
+// Returns null if generation fails so callers can fall back to a plain client.
+async function generatePoToken(visitorData: string): Promise<string | null> {
+  try {
+    const bgConfig = {
+      fetch: plainTauriFetch,
+      globalObj: window,
+      identifier: visitorData,
+      requestKey: 'O43z0dpjhgX20SCx4KAo',
+    };
+    const challenge = await BG.Challenge.create(bgConfig);
+    if (!challenge) return null;
+
+    const interpreter = challenge.interpreterJavascript.privateDoNotAccessOrElseSafeScriptWrappedValue;
+    if (interpreter) {
+      // eslint-disable-next-line no-new-func
+      new Function(interpreter)();
+    }
+
+    const { poToken } = await BG.PoToken.generate({
+      program: challenge.program,
+      globalName: challenge.globalName,
+      bgConfig,
+    });
+    return poToken ?? null;
+  } catch (err) {
+    console.warn('po_token generation failed; falling back to plain client:', err);
+    return null;
+  }
+}
+
+// Separate client used for playback. It retrieves the YouTube player (base.js),
+// needed to decipher stream signatures and solve the `n` throttling param, and
+// attaches a po_token so the web client returns streaming data. Search uses a
+// different, lighter client (no player, no po_token).
+async function getStreamClient() {
+  if (streamYt) return streamYt;
+
+  // A throwaway client gives us the visitor_data that ties the po_token to this session.
+  const seed = await Innertube.create({ fetch: innertubeFetch, retrieve_player: false });
+  const visitorData = seed.session.context.client.visitorData ?? '';
+  const poToken = visitorData ? await generatePoToken(visitorData) : null;
+
+  streamYt = await Innertube.create({
+    fetch: innertubeFetch,
+    cache: new UniversalCache(true),
+    generate_session_locally: true,
+    retrieve_player: true,
+    ...(poToken ? { po_token: poToken, visitor_data: visitorData } : {}),
+  });
+  return streamYt;
 }
 
 export async function searchMusic(query: string) {
@@ -89,93 +155,102 @@ export async function searchMusic(query: string) {
 }
 
 // ============================================================================
-// YOUTUBE IFRAME PLAYER
+// DIRECT AUDIO STREAMING
 // ============================================================================
-// Playback uses the YouTube IFrame Player API loaded into a hidden #yt-player
-// element in the main window. This gives programmatic play/pause/volume control
-// and real playback-state events, which the previous DOM-iframe approach lacked.
+// Playback resolves a direct audio stream URL with youtubei.js and plays it
+// through a single HTMLAudioElement. This bypasses the YouTube embed/iframe
+// player entirely, so embed-restricted official tracks still play.
 
 type AudioState = 'playing' | 'paused' | 'ended' | 'buffering' | 'error';
 
-let player: any = null;
-let playerReady = false;
-let pendingVideoId: string | null = null;
 const statusListeners = new Set<(state: AudioState) => void>();
+let audioEl: HTMLAudioElement | null = null;
+let currentVolume = 0.7;
+// Increments per playTrack() call so a slow stream resolution that finishes
+// after the user already picked another track does not clobber the new one.
+let playToken = 0;
 
 function notifyStatus(state: AudioState) {
   statusListeners.forEach((cb) => cb(state));
 }
 
-function ensurePlayer(): void {
-  if (player || typeof window === 'undefined') return;
-
-  const create = () => {
-    const YT = (window as any).YT;
-    if (!YT || !YT.Player) return;
-    player = new YT.Player('yt-player', {
-      height: '0',
-      width: '0',
-      playerVars: { autoplay: 1, controls: 0, playsinline: 1, origin: window.location.origin, enablejsapi: 1 },
-      events: {
-        onReady: () => {
-          playerReady = true;
-          if (pendingVideoId) {
-            player.loadVideoById(pendingVideoId);
-            pendingVideoId = null;
-          }
-        },
-        onStateChange: (event: any) => {
-          const State = (window as any).YT.PlayerState;
-          switch (event.data) {
-            case State.PLAYING: notifyStatus('playing'); break;
-            case State.PAUSED: notifyStatus('paused'); break;
-            case State.ENDED: notifyStatus('ended'); break;
-            case State.BUFFERING: notifyStatus('buffering'); break;
-          }
-        },
-        // Error codes 100/101/150 mean the video is unavailable or its owner
-        // disabled embedded playback (common for official YouTube Music tracks).
-        onError: (event: any) => {
-          console.error('YT player error code:', event && event.data);
-          notifyStatus('error');
-        },
-      },
-    });
-  };
-
-  if ((window as any).YT && (window as any).YT.Player) {
-    create();
-  } else {
-    (window as any).onYouTubeIframeAPIReady = create;
-    const tag = document.createElement('script');
-    tag.src = 'https://www.youtube.com/iframe_api';
-    document.head.appendChild(tag);
-  }
+function ensureAudio(): HTMLAudioElement {
+  if (audioEl) return audioEl;
+  const el = new Audio();
+  el.preload = 'auto';
+  el.volume = currentVolume;
+  el.addEventListener('playing', () => notifyStatus('playing'));
+  el.addEventListener('pause', () => {
+    if (!el.ended) notifyStatus('paused');
+  });
+  el.addEventListener('ended', () => notifyStatus('ended'));
+  el.addEventListener('waiting', () => notifyStatus('buffering'));
+  el.addEventListener('error', () => {
+    console.error('Audio element error:', el.error);
+    notifyStatus('error');
+  });
+  audioEl = el;
+  return el;
 }
 
 export function initAudioPlayer(): void {
-  ensurePlayer();
+  ensureAudio();
+}
+
+// Resolves a playable audio-only stream URL for a video id. Tries the web
+// client first (uses the po_token) and falls back to mobile clients, which
+// sometimes return streaming data when the web client is throttled.
+export async function getAudioStreamUrl(videoId: string): Promise<string> {
+  const client = await getStreamClient();
+  const clients: Array<'WEB' | 'IOS' | 'ANDROID'> = ['WEB', 'IOS', 'ANDROID'];
+
+  let lastReason = '';
+  for (const c of clients) {
+    const info = await client.getInfo(videoId, { client: c });
+    if (info.streaming_data) {
+      const format = info.chooseFormat({ type: 'audio', quality: 'best' });
+      return format.decipher(client.session.player);
+    }
+    lastReason = `${info.playability_status?.status ?? 'UNKNOWN'}: ${info.playability_status?.reason ?? 'no streaming data'}`;
+  }
+
+  throw new Error(`No playable stream (${lastReason})`);
 }
 
 export async function playTrack(videoId: string): Promise<void> {
-  ensurePlayer();
-  if (player && playerReady) {
-    player.loadVideoById(videoId);
-  } else {
-    pendingVideoId = videoId;
+  const el = ensureAudio();
+  const token = ++playToken;
+  notifyStatus('buffering');
+  try {
+    const url = await getAudioStreamUrl(videoId);
+    if (token !== playToken) return; // a newer track was requested meanwhile
+    if (!url) {
+      notifyStatus('error');
+      return;
+    }
+    el.src = url;
+    el.volume = currentVolume;
+    await el.play();
+  } catch (err) {
+    if (token !== playToken) return;
+    console.error('Failed to resolve/play stream:', err);
+    notifyStatus('error');
   }
 }
 
 export async function pauseTrack(): Promise<void> {
-  if (player && playerReady) player.pauseVideo();
+  audioEl?.pause();
 }
 
 export async function resumeTrack(): Promise<void> {
-  if (player && playerReady) player.playVideo();
+  await audioEl?.play();
 }
 
+// Accepts a 0-100 volume (matching the app's volume state) and maps it to the
+// HTMLAudioElement's 0-1 range.
 export async function setTrackVolume(volume: number): Promise<void> {
-  if (player && playerReady) player.setVolume(volume);
+  currentVolume = Math.min(Math.max(volume / 100, 0), 1);
+  if (audioEl) audioEl.volume = currentVolume;
 }
 
 export function subscribeToAudioStatus(callback: (state: string) => void) {
@@ -187,7 +262,3 @@ export function subscribeToAudioStatus(callback: (state: string) => void) {
 export const setVolume = async (volume: number) => {
   await setTrackVolume(volume);
 };
-
-export async function getAudioStreamUrl(_videoId: string): Promise<string> {
-  return "";
-}
