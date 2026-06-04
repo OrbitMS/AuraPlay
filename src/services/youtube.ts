@@ -1,5 +1,6 @@
 import { Innertube, UniversalCache } from 'youtubei.js';
 import { fetch as tauriFetch } from '@tauri-apps/plugin-http';
+import { emit } from '@tauri-apps/api/event';
 
 let yt: Innertube | null = null;
 
@@ -113,6 +114,11 @@ export async function setTrackVolume(volume: number): Promise<void> {}
 export function subscribeToAudioStatus(callback: (state: string) => void) {
   return () => {};
 }
+
+export const setVolume = async (volume: number) => {
+  await emit('audio-control', { command: 'set_volume', volume });
+};
+
 export async function getAudioStreamUrl(videoId: string): Promise<string> {
   return "";
 }

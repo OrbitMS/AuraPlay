@@ -3,10 +3,11 @@ import {
   playTrack as nativePlayTrack, 
   pauseTrack as nativePauseTrack, 
   resumeTrack as nativeResumeTrack,
+  setVolume as nativeSetVolume,
   subscribeToAudioStatus 
 } from '../services/youtube';
 
-interface Track {
+export interface Track {
   id: string;
   title: string;
   artist: string;
@@ -16,18 +17,34 @@ interface Track {
 interface AudioContextType {
   currentTrack: Track | null;
   isPlaying: boolean;
-  playTrack: (track: Track) => void;
+  queue: Track[];
+  currentIndex: number;
+  isLooping: boolean;
+  isShuffling: boolean;
+  volume: number;
+  setLooping: (val: boolean) => void;
+  setShuffling: (val: boolean) => void;
+  playTrack: (track: Track, completePlaylist?: Track[]) => void;
   togglePlay: () => void;
+  nextTrack: () => void;
+  prevTrack: () => void;
+  stopTrack: () => void;
+  setVolume: (volume: number) => void;
 }
 
 export const AudioContext = createContext<AudioContextType | undefined>(undefined);
 
 export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [currentTrack, setCurrentTrack] = useState<Track | null>(null);
+  const [queue, setQueue] = useState<Track[]>([]);
+  const [currentIndex, setCurrentIndex] = useState<number>(-1);
   const [isPlaying, setIsPlaying] = useState(false);
+  const [isLooping, setIsLooping] = useState(false);
+  const [isShuffling, setIsShuffling] = useState(false);
+  const [volume, setVolumeState] = useState<number>(70); // Initialize standard fallback volume at 70%
+
+  const currentTrack = currentIndex >= 0 && currentIndex < queue.length ? queue[currentIndex] : null;
 
   useEffect(() => {
-    // FIX: Set up the listener synchronously to match our modern YouTube controller layer
     const unlistenFn = subscribeToAudioStatus((state: string) => {
       console.log(`🔊 Audio state update: ${state}`);
       switch (state) {
@@ -38,30 +55,35 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           setIsPlaying(false);
           break;
         case 'ended':
-          setIsPlaying(false);
+          // Auto advance to next song when current finishes
+          if (isLooping) {
+            // Replay same song
+            if (currentTrack) nativePlayTrack(currentTrack.id);
+          } else {
+            nextTrack();
+          }
           break;
         default:
           break;
       }
     });
 
-    // Automatically unsubscribes on unmount safely
     return () => {
-      if (typeof unlistenFn === 'function') {
-        unlistenFn();
-      }
+      if (typeof unlistenFn === 'function') unlistenFn();
     };
-  }, []);
+  }, [currentIndex, queue, isLooping, isShuffling, currentTrack]);
 
-  const playTrack = async (track: Track) => {
-    try {
-      setCurrentTrack(track);
-      setIsPlaying(true); // Assume active playback immediately on navigation stream load
-      await nativePlayTrack(track.id);
-    } catch (err) {
-      console.error("Playback execution failed:", err);
-      setIsPlaying(false);
+  const playTrack = (track: Track, completePlaylist?: Track[]) => {
+    if (completePlaylist && completePlaylist.length > 0) {
+      setQueue(completePlaylist);
+      const idx = completePlaylist.findIndex(t => t.id === track.id);
+      setCurrentIndex(idx >= 0 ? idx : 0);
+    } else {
+      setQueue([track]);
+      setCurrentIndex(0);
     }
+    setIsPlaying(true);
+    nativePlayTrack(track.id).catch(err => console.error("Playback failed:", err));
   };
 
   const togglePlay = async () => {
@@ -79,8 +101,66 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   };
 
+  const nextTrack = () => {
+    if (queue.length === 0) return;
+    
+    if (isShuffling) {
+      const randomIndex = Math.floor(Math.random() * queue.length);
+      setCurrentIndex(randomIndex);
+      return;
+    }
+
+    if (currentIndex < queue.length - 1) {
+      setCurrentIndex(prev => prev + 1);
+    } else {
+      // Loop back to start of album if at the end
+      setCurrentIndex(0);
+    }
+  };
+
+  const prevTrack = () => {
+    if (queue.length === 0) return;
+    if (currentIndex > 0) {
+      setCurrentIndex(prev => prev - 1);
+    } else {
+      setCurrentIndex(queue.length - 1); // Wrap to end
+    }
+  };
+
+  const stopTrack = () => {
+    nativePauseTrack().catch(() => {});
+    setIsPlaying(false);
+    setCurrentIndex(-1);
+    setQueue([]);
+  };
+
+  const setVolume = async (val: number) => {
+    setVolumeState(val);
+    try {
+      await nativeSetVolume(val);
+    } catch (err) {
+      console.error("Volume IPC broadcast failure:", err);
+    }
+  };
+
   return (
-    <AudioContext.Provider value={{ currentTrack, isPlaying, playTrack, togglePlay }}>
+    <AudioContext.Provider value={{
+      currentTrack,
+      isPlaying,
+      queue,
+      currentIndex,
+      isLooping,
+      isShuffling,
+      volume,
+      setLooping: setIsLooping,
+      setShuffling: setIsShuffling,
+      playTrack,
+      togglePlay,
+      nextTrack,
+      prevTrack,
+      stopTrack,
+      setVolume
+    }}>
       {children}
     </AudioContext.Provider>
   );
