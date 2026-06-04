@@ -1,4 +1,4 @@
-import { Innertube, UniversalCache } from 'youtubei.js';
+import { Innertube, UniversalCache, type Types } from 'youtubei.js';
 import { fetch as tauriFetch } from '@tauri-apps/plugin-http';
 import { BG } from 'bgutils-js';
 
@@ -47,6 +47,17 @@ export async function getClient() {
 const plainTauriFetch = ((input: RequestInfo | URL, init?: RequestInit) =>
   tauriFetch(input as string, init as any)) as typeof fetch;
 
+// Fetch for the playback client. Unlike the search fetch it does NOT force a
+// desktop User-Agent/Origin, so youtubei.js's per-client identity (IOS,
+// ANDROID_VR, TV, ...) is honored. Forcing a desktop UA on a mobile/TV client
+// makes YouTube reply "This video is unavailable". Only drops the body on GET,
+// which the HTTP layer rejects otherwise.
+const streamFetch = async (input: RequestInfo | URL, init?: RequestInit) => {
+  const options = init ? { ...init } : {};
+  if ((options.method ?? 'GET').toUpperCase() === 'GET') delete (options as { body?: unknown }).body;
+  return tauriFetch(input as string, options as any) as unknown as Response;
+};
+
 // Generates a Proof-of-Origin (po) token via BotGuard. YouTube increasingly
 // rejects stream requests from the web client without one ("Sign in to confirm
 // you're not a bot"). BotGuard runs in this webview's real browser environment.
@@ -88,12 +99,13 @@ async function getStreamClient() {
   if (streamYt) return streamYt;
 
   // A throwaway client gives us the visitor_data that ties the po_token to this session.
-  const seed = await Innertube.create({ fetch: innertubeFetch, retrieve_player: false });
+  const seed = await Innertube.create({ fetch: streamFetch, retrieve_player: false });
   const visitorData = seed.session.context.client.visitorData ?? '';
   const poToken = visitorData ? await generatePoToken(visitorData) : null;
+  console.log(`[stream] po_token: ${poToken ? `generated (${poToken.length} chars)` : 'NULL — BotGuard failed, web-client streams will be blocked'}`);
 
   streamYt = await Innertube.create({
-    fetch: innertubeFetch,
+    fetch: streamFetch,
     cache: new UniversalCache(true),
     generate_session_locally: true,
     retrieve_player: true,
@@ -120,8 +132,9 @@ export async function searchMusic(query: string) {
     });
   }
 
-  if (rawItems.length === 0 && results.sections) {
-    results.sections.forEach((sec: any) => {
+  const sections = (results as { sections?: Array<{ contents?: unknown[] }> }).sections;
+  if (rawItems.length === 0 && sections) {
+    sections.forEach((sec) => {
       if (sec?.contents) rawItems.push(...sec.contents);
     });
   }
@@ -202,19 +215,42 @@ export function initAudioPlayer(): void {
 // sometimes return streaming data when the web client is throttled.
 export async function getAudioStreamUrl(videoId: string): Promise<string> {
   const client = await getStreamClient();
-  const clients: Array<'WEB' | 'IOS' | 'ANDROID'> = ['WEB', 'IOS', 'ANDROID'];
+  // Ordered by how reliably each client returns a directly playable audio URL
+  // in 2025. ANDROID_VR / TV / YTMUSIC are not (yet) subject to the web SABR
+  // experiment that withholds stream URLs (the "No valid URL to decipher"
+  // error), so they are tried before the plain WEB client.
+  const clients: Types.InnerTubeClient[] = ['ANDROID_VR', 'YTMUSIC', 'TV', 'WEB', 'IOS', 'ANDROID'];
 
   let lastReason = '';
   for (const c of clients) {
-    const info = await client.getInfo(videoId, { client: c });
-    if (info.streaming_data) {
+    try {
+      const info = await client.getInfo(videoId, { client: c });
+      const ps = info.playability_status;
+      const hasData = !!info.streaming_data;
+      console.log(`[stream] ${c}: playability=${ps?.status ?? '?'} reason="${ps?.reason ?? ''}" streaming_data=${hasData}`);
+      if (!hasData) {
+        lastReason = `${c}: ${ps?.status ?? 'NO_DATA'} ${ps?.reason ?? ''}`.trim();
+        continue;
+      }
       const format = info.chooseFormat({ type: 'audio', quality: 'best' });
-      return format.decipher(client.session.player);
+      const f = format as unknown as { itag?: number; url?: string; signature_cipher?: string; cipher?: string };
+      console.log(`[stream] ${c}: itag=${f.itag} hasUrl=${!!f.url} hasSigCipher=${!!f.signature_cipher} hasCipher=${!!f.cipher}`);
+      const url = format.decipher(client.session.player);
+      if (url) {
+        console.log(`[stream] ${c}: resolved playable URL`);
+        return url;
+      }
+      lastReason = `${c}: empty URL after decipher`;
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      console.warn(`[stream] ${c} failed: ${msg}`);
+      // "No valid URL to decipher" => SABR withheld the URL for this client; the
+      // loop continues to a client that still returns one.
+      lastReason = `${c}: ${msg}`;
     }
-    lastReason = `${info.playability_status?.status ?? 'UNKNOWN'}: ${info.playability_status?.reason ?? 'no streaming data'}`;
   }
 
-  throw new Error(`No playable stream (${lastReason})`);
+  throw new Error(`No playable stream. Last: ${lastReason}`);
 }
 
 export async function playTrack(videoId: string): Promise<void> {
