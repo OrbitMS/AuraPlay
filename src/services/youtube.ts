@@ -30,7 +30,8 @@ export async function getClient() {
         return tauriFetch(input as string, options as any) as unknown as Response;
       },
       cache: new UniversalCache({ storage: 'indexeddb' }), 
-      generate_session_locally: true
+      generate_session_locally: true,
+      retrieve_player: false
     });
   }
   return yt;
