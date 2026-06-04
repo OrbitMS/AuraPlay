@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Audio Backend Engine</title>
+</head>
+<body>
+  <div id="yt-player"></div>
+
+  <script>
+    // Inject the YouTube Iframe Player API asynchronously
+    const tag = document.createElement('script');
+    tag.src = "https://www.youtube.com/iframe_api";
+    const firstScriptTag = document.getElementsByTagName('script')[0];
+    firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
+
+    let player;
+    const { listen, emit } = window.__TAURI__.event;
+
+    // This global hook is automatically fired by the YouTube script asset when ready
+    window.onYouTubeIframeAPIReady = function() {
+      console.log("📺 Native YouTube Iframe Core Engine Ready.");
+      
+      player = new YT.Player('yt-player', {
+        height: '1',
+        width: '1',
+        videoId: '',
+        playerVars: {
+          'playsinline': 1,
+          'controls': 0,
+          'disablekb': 1,
+          'autoplay': 1 // Force the player parameters to request instant streaming
+        },
+        events: {
+          'onReady': onPlayerReady,
+          'onStateChange': onPlayerStateChange,
+          'onError': (err) => console.error("YouTube Player Error:", err.data)
+        }
+      });
+    };
+
+    function onPlayerReady(event) {
+      console.log("📡 Core IPC Event Bridge Attached.");
+      
+      listen('audio-control', (e) => {
+        const { command, videoId, volume } = e.payload;
+        
+        if (!player) return;
+
+        if (command === 'play') {
+          player.loadVideoById({ videoId: videoId });
+        } else if (command === 'pause') {
+          player.pauseVideo();
+        } else if (command === 'resume') {
+          player.playVideo();
+        } else if (command === 'set_volume') {
+          player.setVolume(volume);
+        }
+      });
+    }
+
+    function onPlayerStateChange(event) {
+      if (event.data === YT.PlayerState.ENDED) {
+        emit('audio-status', { state: 'ended' });
+      } else if (event.data === YT.PlayerState.PLAYING) {
+        emit('audio-status', { state: 'playing' });
+      } else if (event.data === YT.PlayerState.PAUSED) {
+        emit('audio-status', { state: 'paused' });
+      }
+    }
+  </script>
+</body>
+</html>
