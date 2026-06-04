@@ -3,7 +3,7 @@ import { AudioContext } from '../context/AudioContext';
 
 export const AudioPlayerBar: React.FC = () => {
   const audioContext = useContext(AudioContext);
-  const [volume, setVolume] = useState(75);
+  const [volume] = useState(75);
 
   if (!audioContext) return null;
 
