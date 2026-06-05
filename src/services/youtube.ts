@@ -84,25 +84,29 @@ async function generatePoToken(visitorData: string): Promise<string | null> {
 // needed to decipher stream signatures and solve the `n` throttling param, and
 // attaches a po_token so the web client returns streaming data. Search uses a
 // different, lighter client (no player, no po_token).
-async function getStreamClient() {
+// Promise-locked: concurrent callers share one initialization, preventing
+// duplicate po_token generation and double client creation.
+let streamYtInit: Promise<Innertube> | null = null;
+async function getStreamClient(): Promise<Innertube> {
   if (streamYt) return streamYt;
-
-  // A throwaway client gives us the visitor_data that ties the po_token to this session.
-  // Uses the same spoofed-header fetch as search; without an Origin/User-Agent the
-  // youtubei v1/player and v1/next calls are rejected by YouTube with HTTP 403.
-  const seed = await Innertube.create({ fetch: innertubeFetch, retrieve_player: false });
-  const visitorData = seed.session.context.client.visitorData ?? '';
-  const poToken = visitorData ? await generatePoToken(visitorData) : null;
-  console.log(`[stream] po_token: ${poToken ? `generated (${poToken.length} chars)` : 'NULL — BotGuard failed, web-client streams will be blocked'}`);
-
-  streamYt = await Innertube.create({
-    fetch: innertubeFetch,
-    cache: new UniversalCache(true),
-    generate_session_locally: true,
-    retrieve_player: true,
-    ...(poToken ? { po_token: poToken, visitor_data: visitorData } : {}),
-  });
-  return streamYt;
+  if (!streamYtInit) {
+    streamYtInit = (async () => {
+      // A throwaway client gives us the visitor_data that ties the po_token to this session.
+      const seed = await Innertube.create({ fetch: innertubeFetch, retrieve_player: false });
+      const visitorData = seed.session.context.client.visitorData ?? '';
+      const poToken = visitorData ? await generatePoToken(visitorData) : null;
+      console.log(`[stream] po_token: ${poToken ? `generated (${poToken.length} chars)` : 'NULL — BotGuard failed'}`);
+      streamYt = await Innertube.create({
+        fetch: innertubeFetch,
+        cache: new UniversalCache(true),
+        generate_session_locally: true,
+        retrieve_player: true,
+        ...(poToken ? { po_token: poToken, visitor_data: visitorData } : {}),
+      });
+      return streamYt;
+    })();
+  }
+  return streamYtInit;
 }
 
 type FeedTrack = { id: string; name: string; artists: { name: string }[]; thumbnails: { url: string }[] };
@@ -250,8 +254,7 @@ let currentVolume = 0.7;
 // after the user already picked another track does not clobber the new one.
 let playToken = 0;
 
-// In-memory URL cache: resolved stream URLs are valid for ~6h; cache for 50min
-// to give ample margin. Keyed by videoId.
+// In-memory URL cache: resolved stream URLs are valid for ~6h; cache for 50min.
 const urlCache = new Map<string, { url: string; expiresAt: number }>();
 const URL_CACHE_TTL_MS = 50 * 60 * 1000;
 
@@ -265,6 +268,9 @@ function getCachedUrl(videoId: string): string | null {
 function setCachedUrl(videoId: string, url: string) {
   urlCache.set(videoId, { url, expiresAt: Date.now() + URL_CACHE_TTL_MS });
 }
+
+// In-flight map: deduplicates concurrent resolution calls for the same videoId.
+const inFlightUrls = new Map<string, Promise<string>>();
 
 function notifyStatus(state: AudioState) {
   statusListeners.forEach((cb) => cb(state));
@@ -302,6 +308,16 @@ export async function getAudioStreamUrl(videoId: string): Promise<string> {
   const cached = getCachedUrl(videoId);
   if (cached) return cached;
 
+  // Share one in-flight resolution across concurrent callers for the same id
+  let promise = inFlightUrls.get(videoId);
+  if (!promise) {
+    promise = resolveStreamUrl(videoId).finally(() => inFlightUrls.delete(videoId));
+    inFlightUrls.set(videoId, promise);
+  }
+  return promise;
+}
+
+async function resolveStreamUrl(videoId: string): Promise<string> {
   const client = await getStreamClient();
   // Ordered by how reliably each client returns a directly playable audio URL
   // in 2025. ANDROID_VR / TV / YTMUSIC are not (yet) subject to the web SABR
@@ -343,9 +359,16 @@ export async function getAudioStreamUrl(videoId: string): Promise<string> {
 }
 
 // Silently pre-resolves a stream URL into cache so it's ready when the user clicks play.
+// Capped at 2 concurrent prefetches to avoid flooding YouTube and triggering
+// "video unavailable" rate-limit responses that would also block real play requests.
+let activePrefetches = 0;
 export function prefetchStreamUrl(videoId: string): void {
-  if (getCachedUrl(videoId)) return;
-  getAudioStreamUrl(videoId).catch(() => {});
+  if (getCachedUrl(videoId) || inFlightUrls.has(videoId)) return;
+  if (activePrefetches >= 2) return;
+  activePrefetches++;
+  getAudioStreamUrl(videoId)
+    .catch(() => {})
+    .finally(() => { activePrefetches--; });
 }
 
 export async function playTrack(videoId: string): Promise<void> {
