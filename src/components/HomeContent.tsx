@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useContext } from 'react';
-import { getHomeFeed, prefetchStreamUrl } from '../services/youtube';
+import { getHomeFeed, searchMusic, prefetchStreamUrl } from '../services/youtube';
 import { AudioContext, type Track } from '../context/AudioContext';
 import { useHistory } from '../hooks/useHistory';
 import { useLikes } from '../hooks/useLikes';
@@ -126,10 +126,28 @@ export const HomeContent: React.FC = () => {
 
   useEffect(() => {
     let cancelled = false;
+
+    const fallback = async () => {
+      const tracks = await searchMusic('top hits 2024');
+      if (!cancelled) setFeedSections([{ title: 'Popular Right Now', tracks: tracks.slice(0, 15) }]);
+    };
+
     getHomeFeed()
-      .then((sections) => { if (!cancelled) setFeedSections(sections); })
-      .catch((err) => console.warn('Home feed failed:', err))
+      .then(async (sections) => {
+        if (cancelled) return;
+        if (sections.length > 0) {
+          setFeedSections(sections);
+        } else {
+          console.warn('Home feed returned empty, falling back to popular search');
+          await fallback();
+        }
+      })
+      .catch(async (err) => {
+        console.warn('Home feed failed, falling back to popular search:', err);
+        if (!cancelled) await fallback().catch(() => {});
+      })
       .finally(() => { if (!cancelled) setLoading(false); });
+
     return () => { cancelled = true; };
   }, []);
 
