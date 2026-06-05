@@ -54,7 +54,9 @@ html, body, #root {
   width: 100%;
   height: 100%;
   overflow: hidden;
-  background: var(--color-obsidian);
+  /* Transparent so the OS acrylic/blur window effect shows through. The app
+     shell paints its own translucent background on top. */
+  background: transparent;
   color: var(--tp);
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;

@@ -76,15 +76,20 @@ export const AudioPlayerBar: React.FC<Props> = ({ onQueueToggle, queueOpen, onEx
   const S = 15; // secondary control icon size
   const T = 12; // tertiary (shuffle/repeat) size
 
+  const canExpand = !!(currentTrack || radioStation);
+
   return (
     <div
+      onClick={canExpand ? onExpand : undefined}
+      title={canExpand ? 'Open Now Playing' : undefined}
       className="flex items-center select-none flex-shrink-0 z-10 relative"
       style={{
         height: '110px',
         paddingLeft: '28px',
         paddingRight: '28px',
-        background: 'linear-gradient(180deg, rgba(6,6,8,0.98) 0%, rgba(4,4,6,1) 100%)',
+        background: 'linear-gradient(180deg, rgba(8,8,11,0.92) 0%, rgba(5,5,7,0.96) 100%)',
         borderTop: '1px solid rgba(201,168,76,0.12)',
+        cursor: canExpand ? 'pointer' : 'default',
       }}
     >
       {/* Top gradient accent */}
@@ -166,7 +171,7 @@ export const AudioPlayerBar: React.FC<Props> = ({ onQueueToggle, queueOpen, onEx
       </div>
 
       {/* ── CENTER: Controls + Progress ───────────────────────────────────── */}
-      <div className="flex-1 flex flex-col items-center gap-3">
+      <div className="flex-1 flex flex-col items-center gap-3" onClick={e => e.stopPropagation()}>
 
         {/* Transport buttons */}
         <div className="flex items-center gap-6">
@@ -271,7 +276,7 @@ export const AudioPlayerBar: React.FC<Props> = ({ onQueueToggle, queueOpen, onEx
       </div>
 
       {/* ── RIGHT: Volume + Queue ─────────────────────────────────────────── */}
-      <div className="flex items-center justify-end gap-3" style={{ width: '28%' }}>
+      <div className="flex items-center justify-end gap-3" style={{ width: '28%' }} onClick={e => e.stopPropagation()}>
 
         {/* Mute toggle */}
         <button onClick={toggleMute} title={volume === 0 ? 'Unmute' : 'Mute'}
