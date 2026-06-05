@@ -3,6 +3,7 @@ import { searchMusic } from '../services/youtube';
 import { AudioContext, Track } from '../context/AudioContext';
 import { useLikes } from '../hooks/useLikes';
 import { HomeContent } from '../components/HomeContent';
+import { AddToPlaylistButton } from '../components/AddToPlaylistButton';
 import { Search, Download, CheckCircle, Loader, Heart, Minus, Plus } from 'lucide-react';
 
 export const SearchView: React.FC = () => {
@@ -146,10 +147,11 @@ export const SearchView: React.FC = () => {
       {/* Search results */}
       {hasSearched && (
       <>
-      <div className="grid grid-cols-[30px_1fr_160px_32px_32px] gap-x-[14px] px-[10px] pb-[8px] border-b border-[var(--bd)] mb-[2px]">
+      <div className="grid grid-cols-[30px_1fr_160px_32px_32px_32px] gap-x-[14px] px-[10px] pb-[8px] border-b border-[var(--bd)] mb-[2px]">
         <div className="text-[8px] text-[var(--tt)] tracking-[0.1em] uppercase" style={{ fontFamily: 'var(--fm)' }}>#</div>
         <div className="text-[8px] text-[var(--tt)] tracking-[0.1em] uppercase" style={{ fontFamily: 'var(--fm)' }}>Track</div>
         <div className="text-[8px] text-[var(--tt)] tracking-[0.1em] uppercase" style={{ fontFamily: 'var(--fm)' }}>Artist</div>
+        <div></div>
         <div></div>
         <div></div>
       </div>
@@ -165,7 +167,7 @@ export const SearchView: React.FC = () => {
             <div
               key={song.id}
               onClick={() => playSong(song)}
-              className={`cv-row grid grid-cols-[30px_1fr_160px_32px_32px] gap-x-[14px] items-center px-[10px] py-[7px] rounded-[5px] cursor-pointer border-l-2 transition-colors ${active ? 'bg-[var(--gold-g)] border-[var(--gold)]' : 'border-transparent hover:bg-white/[0.025]'}`}
+              className={`cv-row grid grid-cols-[30px_1fr_160px_32px_32px_32px] gap-x-[14px] items-center px-[10px] py-[7px] rounded-[5px] cursor-pointer border-l-2 transition-colors ${active ? 'bg-[var(--gold-g)] border-[var(--gold)]' : 'border-transparent hover:bg-white/[0.025]'}`}
             >
               <span className="text-[10px] text-[var(--tt)] text-center" style={{ fontFamily: 'var(--fm)' }}>
                 {active ? (
@@ -207,6 +209,7 @@ export const SearchView: React.FC = () => {
                   <Download size={13} className="text-[var(--tt)] hover:text-[var(--ts)]" />
                 )}
               </button>
+              <AddToPlaylistButton track={track} />
             </div>
           );
         })}
