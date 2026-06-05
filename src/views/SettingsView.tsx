@@ -1,6 +1,8 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { type AudioQuality } from '../hooks/useSettings';
 import { setAudioQuality } from '../services/youtube';
+import { connectSpotify, disconnectSpotify, isSpotifyConnected, getClientId } from '../services/spotifyAuth';
+import { Music2, Check, Loader } from 'lucide-react';
 
 interface Props {
   quality: AudioQuality;
@@ -93,7 +95,7 @@ export const SettingsView: React.FC<Props> = ({ quality, onQualityChange }) => {
       </section>
 
       {/* Info note */}
-      <div className="flex items-start gap-2.5 px-4 py-3 rounded-[8px] bg-[var(--s1)] border border-[var(--bd)]">
+      <div className="flex items-start gap-2.5 px-4 py-3 rounded-[8px] bg-[var(--s1)] border border-[var(--bd)] mb-10">
         <svg viewBox="0 0 24 24" fill="none" stroke="var(--tt)" strokeWidth="2" strokeLinecap="round" className="w-4 h-4 flex-shrink-0 mt-0.5">
           <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
         </svg>
@@ -101,6 +103,64 @@ export const SettingsView: React.FC<Props> = ({ quality, onQualityChange }) => {
           Quality depends on what YouTube provides for each track. Exact bitrate may vary. Previously resolved stream URLs are cached for up to 50 minutes — changing quality immediately clears this cache.
         </p>
       </div>
+
+      <SpotifySection />
     </div>
+  );
+};
+
+/* ── Spotify account connection (for importing private playlists) ── */
+const SpotifySection: React.FC = () => {
+  const [clientId, setClientId] = useState(getClientId());
+  const [connected, setConnected] = useState(isSpotifyConnected());
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+
+  const connect = async () => {
+    setError(''); setBusy(true);
+    try { await connectSpotify(clientId); setConnected(true); }
+    catch (e) { setError(e instanceof Error ? e.message : 'Connection failed.'); }
+    finally { setBusy(false); }
+  };
+  const disconnect = () => { disconnectSpotify(); setConnected(false); };
+
+  return (
+    <section className="mb-8">
+      <h2 className="text-[13px] font-semibold text-[var(--tp)] mb-1 tracking-[0.01em] flex items-center gap-2">
+        <Music2 size={15} className="text-[var(--gold)]" /> Spotify Account
+      </h2>
+      <p className="text-[11px] text-[var(--ts)] mb-4 leading-relaxed" style={{ fontFamily: 'var(--fm)' }}>
+        Connect Spotify to import your <b>private</b> playlists. Public playlists work without this — just paste a link in Import.
+      </p>
+
+      {connected ? (
+        <div className="flex items-center justify-between px-4 py-3 rounded-[8px]" style={{ background: 'var(--gold-g)', border: '1px solid rgba(201,168,76,0.3)' }}>
+          <div className="flex items-center gap-2 text-[12px]" style={{ color: 'var(--gold)' }}>
+            <Check size={15} /> Connected to Spotify
+          </div>
+          <button onClick={disconnect} className="text-[11px] px-3 py-1.5 rounded-[6px]" style={{ background: 'var(--s2)', border: '1px solid var(--bd)', color: 'var(--ts)', cursor: 'pointer' }}>
+            Disconnect
+          </button>
+        </div>
+      ) : (
+        <div className="flex flex-col gap-2.5">
+          <input value={clientId} onChange={e => setClientId(e.target.value)} placeholder="Spotify Client ID"
+            className="rounded-[8px] px-3 py-2.5 text-[12px] outline-none"
+            style={{ background: 'var(--s1)', border: '1px solid var(--bs)', color: 'var(--tp)', fontFamily: 'var(--fm)' }} />
+          <button onClick={connect} disabled={busy || !clientId.trim()}
+            className="self-start flex items-center gap-2 px-5 py-2.5 rounded-[7px] text-[11px] font-bold uppercase tracking-[0.06em] disabled:opacity-50"
+            style={{ background: 'var(--gold)', color: 'var(--obsidian)', border: 'none', cursor: 'pointer' }}>
+            {busy ? <Loader size={13} className="animate-spin" /> : <Music2 size={13} />} Connect Spotify
+          </button>
+          {error && <p className="text-[11px]" style={{ color: '#e57373' }}>{error}</p>}
+          <div className="px-4 py-3 rounded-[8px] mt-1" style={{ background: 'var(--s1)', border: '1px solid var(--bd)' }}>
+            <p className="text-[10px] text-[var(--ts)] leading-relaxed" style={{ fontFamily: 'var(--fm)' }}>
+              <b>One-time setup:</b> create a free app at <span style={{ color: 'var(--gold)' }}>developer.spotify.com/dashboard</span>,
+              add the Redirect URI <span style={{ color: 'var(--gold)' }}>http://127.0.0.1:14565/callback</span>, then paste the app's <b>Client ID</b> above.
+            </p>
+          </div>
+        </div>
+      )}
+    </section>
   );
 };
