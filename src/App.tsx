@@ -6,6 +6,7 @@ import { SettingsView } from './views/SettingsView';
 import { RadioView } from './views/RadioView';
 import { AudioPlayerBar } from './components/AudioPlayerBar';
 import { QueueSidebar } from './components/QueueSidebar';
+import { NowPlayingScreen } from './components/NowPlayingScreen';
 import { useSettings } from './hooks/useSettings';
 import { setAudioQuality } from './services/youtube';
 import './App.css';
@@ -15,6 +16,7 @@ type View = 'search' | 'favorites' | 'radio' | 'settings';
 function App() {
   const [view, setView] = useState<View>('search');
   const [showQueue, setShowQueue] = useState(false);
+  const [showNowPlaying, setShowNowPlaying] = useState(false);
   const { settings, update: updateSettings } = useSettings();
 
   useEffect(() => { setAudioQuality(settings.audioQuality); }, [settings.audioQuality]);
@@ -99,7 +101,11 @@ function App() {
         <AudioPlayerBar
           onQueueToggle={() => setShowQueue(v => !v)}
           queueOpen={showQueue}
+          onExpand={() => setShowNowPlaying(true)}
         />
+
+        {/* Full-screen Now Playing */}
+        {showNowPlaying && <NowPlayingScreen onClose={() => setShowNowPlaying(false)} />}
       </div>
     </AudioProvider>
   );
