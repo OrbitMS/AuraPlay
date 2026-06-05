@@ -4,8 +4,9 @@ import type { Track } from '../context/AudioContext';
 import { Plus, Check, ListPlus } from 'lucide-react';
 
 interface Props { track: Track; size?: number; }
+/* default icon size bumped for visibility */
 
-export const AddToPlaylistButton: React.FC<Props> = ({ track, size = 13 }) => {
+export const AddToPlaylistButton: React.FC<Props> = ({ track, size = 18 }) => {
   const { playlists } = usePlaylists();
   const [open, setOpen] = useState(false);
   const [added, setAdded] = useState(false);
@@ -30,8 +31,8 @@ export const AddToPlaylistButton: React.FC<Props> = ({ track, size = 13 }) => {
       <button
         onClick={e => { e.stopPropagation(); setOpen(o => !o); }}
         title="Add to playlist"
-        className="flex items-center justify-center w-7 h-7 rounded-[4px] transition-colors hover:bg-white/[0.06]"
-        style={{ background: 'none', border: 'none', cursor: 'pointer', color: added ? 'var(--gold)' : 'var(--tt)' }}>
+        className="flex items-center justify-center w-9 h-9 rounded-[7px] transition-colors hover:bg-white/[0.08]"
+        style={{ background: 'none', border: 'none', cursor: 'pointer', color: added ? 'var(--gold)' : 'var(--ts)' }}>
         {added ? <Check size={size} /> : <Plus size={size} />}
       </button>
 

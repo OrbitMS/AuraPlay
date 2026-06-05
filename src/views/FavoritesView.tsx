@@ -42,7 +42,7 @@ export const FavoritesView: React.FC = () => {
           </button>
 
           {/* Column headers */}
-          <div className="grid grid-cols-[30px_1fr_160px_32px] gap-x-[14px] px-[10px] pb-[8px] border-b border-[var(--bd)] mb-[2px]">
+          <div className="grid grid-cols-[30px_1fr_160px_38px] gap-x-[14px] px-[10px] pb-[8px] border-b border-[var(--bd)] mb-[2px]">
             {['#', 'Track', 'Artist', ''].map((h, i) => (
               <div key={i} className="text-[10px] text-[var(--ts)] tracking-[0.12em] uppercase font-semibold" style={{ fontFamily: 'var(--fm)' }}>{h}</div>
             ))}
@@ -55,7 +55,7 @@ export const FavoritesView: React.FC = () => {
                 <div
                   key={track.id}
                   onClick={() => playTrack(track)}
-                  className={`cv-row grid grid-cols-[30px_1fr_160px_32px] gap-x-[14px] items-center px-[10px] py-[7px] rounded-[5px] cursor-pointer border-l-2 transition-colors ${active ? 'bg-[var(--gold-g)] border-[var(--gold)]' : 'border-transparent hover:bg-white/[0.025]'}`}
+                  className={`cv-row grid grid-cols-[30px_1fr_160px_38px] gap-x-[14px] items-center px-[10px] py-[7px] rounded-[5px] cursor-pointer border-l-2 transition-colors ${active ? 'bg-[var(--gold-g)] border-[var(--gold)]' : 'border-transparent hover:bg-white/[0.025]'}`}
                 >
                   <span className="text-[10px] text-[var(--tt)] text-center" style={{ fontFamily: 'var(--fm)' }}>
                     {active ? (
@@ -81,9 +81,9 @@ export const FavoritesView: React.FC = () => {
                   <button
                     onClick={(e) => { e.stopPropagation(); toggle(track); }}
                     title="Remove from favorites"
-                    className="flex items-center justify-center w-7 h-7 rounded-[4px] transition-colors hover:bg-white/[0.06]"
+                    className="flex items-center justify-center w-9 h-9 rounded-[7px] transition-colors hover:bg-white/[0.08]"
                   >
-                    <Heart size={13} fill="#c9a84c" stroke="#c9a84c" />
+                    <Heart size={18} fill="#c9a84c" stroke="#c9a84c" />
                   </button>
                 </div>
               );

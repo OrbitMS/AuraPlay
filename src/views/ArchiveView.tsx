@@ -2,6 +2,7 @@ import React, { useState, useContext } from 'react';
 import { AudioContext, type Track } from '../context/AudioContext';
 import { searchArchive, getArchiveItemTracks, type ArchiveItem } from '../services/archive';
 import { safeImageUrl } from '../lib/safeUrl';
+import { rankItems } from '../lib/rankResults';
 import { Search, Library, ChevronLeft, Play, Loader, Disc3 } from 'lucide-react';
 
 export const ArchiveView: React.FC = () => {
@@ -20,7 +21,11 @@ export const ArchiveView: React.FC = () => {
     e?.preventDefault();
     if (!query.trim()) return;
     setLoading(true); setSearched(true);
-    try { setItems(await searchArchive(query)); }
+    try {
+      const res = await searchArchive(query);
+      // Blend Archive's download-count popularity with query relevance
+      setItems(rankItems(res, it => ({ id: it.identifier, title: it.title, artist: it.creator, views: it.downloads }), query, new Set(), []));
+    }
     catch { setItems([]); }
     finally { setLoading(false); }
   };

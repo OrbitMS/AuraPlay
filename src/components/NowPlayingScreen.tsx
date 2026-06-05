@@ -119,15 +119,20 @@ export const NowPlayingScreen: React.FC<Props> = ({ onClose }) => {
         <span className="text-[10px] tracking-[0.18em] uppercase" style={{ color: 'var(--tt)', fontFamily: 'var(--fm)' }}>
           {isLive ? 'Now Streaming' : (showLyrics ? 'Lyrics' : 'Now Playing')}
         </span>
-        {/* Lyrics / artwork toggle (hidden for radio) */}
+        {/* Lyrics / artwork toggle (hidden for radio) — labelled pill */}
         {!isLive ? (
           <button onClick={() => setShowLyrics(v => !v)} title={showLyrics ? 'Show artwork' : 'Show lyrics'}
-            className="w-10 h-10 flex items-center justify-center rounded-full transition-colors"
+            className="flex items-center gap-2 h-10 px-4 rounded-full transition-all hover:scale-[1.03] active:scale-95"
             style={{
-              background: showLyrics ? 'rgba(201,168,76,0.16)' : 'rgba(255,255,255,0.06)',
-              border: 'none', cursor: 'pointer', color: showLyrics ? 'var(--gold)' : 'var(--ts)',
+              background: showLyrics ? 'linear-gradient(135deg, var(--gold-b), var(--gold))' : 'rgba(255,255,255,0.08)',
+              border: showLyrics ? 'none' : '1px solid var(--bs)',
+              cursor: 'pointer',
+              color: showLyrics ? 'var(--obsidian)' : 'var(--tp)',
+              fontFamily: 'var(--fm)',
+              boxShadow: showLyrics ? '0 3px 14px rgba(201,168,76,0.35)' : 'none',
             }}>
-            {showLyrics ? <Disc3 size={18} /> : <Mic2 size={18} />}
+            {showLyrics ? <Disc3 size={16} /> : <Mic2 size={16} />}
+            <span className="text-[11px] font-bold uppercase tracking-[0.08em]">{showLyrics ? 'Artwork' : 'Lyrics'}</span>
           </button>
         ) : <div className="w-10" />}
       </div>
