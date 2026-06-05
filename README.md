@@ -18,16 +18,7 @@ Tauri-Powered: Unmatched performance and speed with ultra-low resource usage.
 
 Modern UI: A responsive, clean interface that puts your music at the center.
 
-## Prerequisites
-* [Node.js](https://nodejs.org/) (v18+)
-* [Rust](https://www.rust-lang.org/tools/install) (latest stable)
-* [Tauri CLI](https://tauri.app/v1/guides/getting-started/prerequisites/)
 
-## Getting Started
-1. **Clone the repository:**
-   ```bash
-   git clone [https://github.com/MSCheckPoint/metrolist-desktop.git](https://github.com/MSCheckPoint/metrolist-desktop.git)
-   cd metrolist-desktop
 
 ## Tech Stack
 - **Frontend**: React 19, Tailwind CSS
