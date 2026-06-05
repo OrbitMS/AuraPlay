@@ -12,6 +12,7 @@ export interface ArchiveItem {
   title: string;
   creator: string;
   thumbnail: string;
+  downloads: number;
 }
 
 function firstStr(v: unknown): string {
@@ -22,7 +23,7 @@ function firstStr(v: unknown): string {
 export async function searchArchive(query: string, rows = 48): Promise<ArchiveItem[]> {
   const params = new URLSearchParams();
   params.set('q', `(${query}) AND mediatype:(audio)`);
-  ['identifier', 'title', 'creator'].forEach(f => params.append('fl[]', f));
+  ['identifier', 'title', 'creator', 'downloads'].forEach(f => params.append('fl[]', f));
   params.append('sort[]', 'downloads desc');
   params.set('rows', String(rows));
   params.set('page', '1');
@@ -36,6 +37,7 @@ export async function searchArchive(query: string, rows = 48): Promise<ArchiveIt
     title: firstStr(d.title) || d.identifier,
     creator: firstStr(d.creator),
     thumbnail: `https://archive.org/services/img/${d.identifier}`,
+    downloads: Number(d.downloads) || 0,
   }));
 }
 

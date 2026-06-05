@@ -45,7 +45,7 @@ export const DownloadedView: React.FC = () => {
             Play All
           </button>
 
-          <div className="grid grid-cols-[30px_1fr_160px_32px] gap-x-[14px] px-[10px] pb-[8px] border-b border-[var(--bd)] mb-[2px]">
+          <div className="grid grid-cols-[30px_1fr_160px_38px] gap-x-[14px] px-[10px] pb-[8px] border-b border-[var(--bd)] mb-[2px]">
             {['#', 'Track', 'Artist', ''].map((h, i) => (
               <div key={i} className="text-[10px] text-[var(--ts)] tracking-[0.12em] uppercase font-semibold" style={{ fontFamily: 'var(--fm)' }}>{h}</div>
             ))}
@@ -58,7 +58,7 @@ export const DownloadedView: React.FC = () => {
                 <div
                   key={track.id}
                   onClick={() => playFrom(track.id)}
-                  className={`cv-row grid grid-cols-[30px_1fr_160px_32px] gap-x-[14px] items-center px-[10px] py-[7px] rounded-[5px] cursor-pointer border-l-2 transition-colors ${active ? 'bg-[var(--gold-g)] border-[var(--gold)]' : 'border-transparent hover:bg-white/[0.025]'}`}
+                  className={`cv-row grid grid-cols-[30px_1fr_160px_38px] gap-x-[14px] items-center px-[10px] py-[7px] rounded-[5px] cursor-pointer border-l-2 transition-colors ${active ? 'bg-[var(--gold-g)] border-[var(--gold)]' : 'border-transparent hover:bg-white/[0.025]'}`}
                 >
                   <span className="text-[10px] text-[var(--tt)] text-center" style={{ fontFamily: 'var(--fm)' }}>
                     {active ? (
@@ -79,9 +79,9 @@ export const DownloadedView: React.FC = () => {
                   <button
                     onClick={(e) => { e.stopPropagation(); ctx?.removeDownload(track.id); }}
                     title="Delete download"
-                    className="flex items-center justify-center w-7 h-7 rounded-[4px] transition-colors hover:bg-white/[0.06] text-[var(--tt)] hover:text-red-400"
+                    className="flex items-center justify-center w-9 h-9 rounded-[7px] transition-colors hover:bg-white/[0.08] text-[var(--ts)] hover:text-red-400"
                   >
-                    <Trash2 size={13} />
+                    <Trash2 size={17} />
                   </button>
                 </div>
               );

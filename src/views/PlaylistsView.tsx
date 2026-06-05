@@ -66,7 +66,7 @@ export const PlaylistsView: React.FC = () => {
               const active = currentTrackId === track.id;
               return (
                 <div key={track.id} onClick={() => ctx?.playTrack(track, selected.tracks)}
-                  className={`cv-row grid grid-cols-[30px_1fr_160px_32px] gap-x-[14px] items-center px-[10px] py-[7px] rounded-[5px] cursor-pointer border-l-2 transition-colors ${active ? 'bg-[var(--gold-g)] border-[var(--gold)]' : 'border-transparent hover:bg-white/[0.025]'}`}>
+                  className={`cv-row grid grid-cols-[30px_1fr_160px_38px] gap-x-[14px] items-center px-[10px] py-[7px] rounded-[5px] cursor-pointer border-l-2 transition-colors ${active ? 'bg-[var(--gold-g)] border-[var(--gold)]' : 'border-transparent hover:bg-white/[0.025]'}`}>
                   <span className="text-[10px] text-[var(--tt)] text-center" style={{ fontFamily: 'var(--fm)' }}>{String(idx + 1).padStart(2, '0')}</span>
                   <div className="flex items-center gap-2.5 overflow-hidden">
                     {track.thumbnail
@@ -76,9 +76,9 @@ export const PlaylistsView: React.FC = () => {
                   </div>
                   <span className="text-[10px] text-[var(--ts)] truncate" style={{ fontFamily: 'var(--fm)' }}>{track.artist}</span>
                   <button onClick={e => { e.stopPropagation(); removeTrackFromPlaylist(selected.id, track.id); }}
-                    title="Remove" className="flex items-center justify-center w-7 h-7 rounded-[4px] hover:bg-white/[0.06] text-[var(--tt)] hover:text-red-400"
+                    title="Remove" className="flex items-center justify-center w-9 h-9 rounded-[7px] hover:bg-white/[0.08] text-[var(--ts)] hover:text-red-400"
                     style={{ background: 'none', border: 'none', cursor: 'pointer' }}>
-                    <Trash2 size={13} />
+                    <Trash2 size={17} />
                   </button>
                 </div>
               );

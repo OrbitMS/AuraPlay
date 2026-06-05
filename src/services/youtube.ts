@@ -357,7 +357,27 @@ function normalizeFeedItem(item: any): FeedTrack | null {
 // a previous one) is instant instead of a fresh network round-trip.
 const searchCache = new Map<string, { at: number; data: SearchResult[] }>();
 const SEARCH_TTL_MS = 5 * 60 * 1000;
-type SearchResult = { id: string; name: string; artists: { name: string }[]; thumbnails: { url: string }[] };
+export type SearchResult = {
+  id: string;
+  name: string;
+  artists: { name: string }[];
+  thumbnails: { url: string }[];
+  views?: number;       // popularity proxy (when YouTube exposes it)
+  duration?: number;    // seconds (used to demote hour-long mixes)
+  itemType?: string;    // 'song' | 'video' | …
+};
+
+// Parses "1.2M views", "345K", "1,234" → a number.
+function parseCount(v: unknown): number | undefined {
+  const s = typeof v === 'string' ? v : (v as any)?.text;
+  if (typeof s !== 'string') return undefined;
+  const m = s.replace(/,/g, '').match(/([\d.]+)\s*([KMB])?/i);
+  if (!m) return undefined;
+  const n = parseFloat(m[1]);
+  if (!isFinite(n)) return undefined;
+  const mult = m[2] ? ({ k: 1e3, m: 1e6, b: 1e9 }[m[2].toLowerCase()] ?? 1) : 1;
+  return Math.round(n * mult);
+}
 
 export async function searchMusic(query: string): Promise<SearchResult[]> {
   const key = query.trim().toLowerCase();
@@ -407,11 +427,19 @@ export async function searchMusic(query: string): Promise<SearchResult[]> {
     let thumbnailUrl = '';
     if (track.thumbnails?.[0]?.url) thumbnailUrl = track.thumbnails[0].url;
 
+    const views = parseCount(track.views ?? track.short_view_count ?? track.view_count);
+    const duration = typeof track.duration === 'object'
+      ? track.duration?.seconds
+      : (typeof track.duration === 'number' ? track.duration : undefined);
+
     return {
       id: id || `fallback-id-${index}`,
       name,
       artists: [{ name: artistName }],
       thumbnails: [{ url: thumbnailUrl }],
+      views,
+      duration,
+      itemType: String(track.type ?? '').toLowerCase(),
     };
   });
 

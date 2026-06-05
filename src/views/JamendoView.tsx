@@ -2,6 +2,9 @@ import React, { useState, useEffect, useContext } from 'react';
 import { AudioContext, type Track } from '../context/AudioContext';
 import { searchJamendo, popularJamendo, jamendoByTag, getJamendoClientId } from '../services/jamendo';
 import { safeImageUrl } from '../lib/safeUrl';
+import { rankItems } from '../lib/rankResults';
+import { useLikes } from '../hooks/useLikes';
+import { useHistory } from '../hooks/useHistory';
 import { Search, Music2, Loader, Play } from 'lucide-react';
 
 const TAGS = ['pop', 'rock', 'electronic', 'jazz', 'classical', 'hiphop', 'lounge', 'ambient', 'folk', 'metal'];
@@ -15,10 +18,15 @@ export const JamendoView: React.FC = () => {
   const [tag, setTag] = useState<string | null>(null);
   const [tracks, setTracks] = useState<Track[]>([]);
   const [loading, setLoading] = useState(hasKey);
+  const { likedIds } = useLikes();
+  const { history } = useHistory();
 
-  const load = async (fn: () => Promise<Track[]>) => {
+  const load = async (fn: () => Promise<Track[]>, q = '') => {
     setLoading(true);
-    try { setTracks(await fn()); } catch { setTracks([]); } finally { setLoading(false); }
+    try {
+      const res = await fn();
+      setTracks(rankItems(res, t => ({ id: t.id, title: t.title, artist: t.artist }), q, likedIds, history.map(h => h.id)));
+    } catch { setTracks([]); } finally { setLoading(false); }
   };
 
   useEffect(() => { if (hasKey) load(() => popularJamendo()); /* eslint-disable-next-line */ }, []);
@@ -26,7 +34,7 @@ export const JamendoView: React.FC = () => {
   const doSearch = (e?: React.FormEvent) => {
     e?.preventDefault();
     setTag(null);
-    if (query.trim()) load(() => searchJamendo(query));
+    if (query.trim()) load(() => searchJamendo(query), query);
     else load(() => popularJamendo());
   };
 
