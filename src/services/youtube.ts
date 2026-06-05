@@ -249,7 +249,10 @@ export async function playTrack(videoId: string): Promise<void> {
   const token = ++playToken;
   notifyStatus('buffering');
   try {
-    const url = await getAudioStreamUrl(videoId);
+    // Prefer cached offline file; fall back to live stream
+    const { getOfflineUrl } = await import('./offline');
+    const offlineUrl = await getOfflineUrl(videoId);
+    const url = offlineUrl ?? await getAudioStreamUrl(videoId);
     if (token !== playToken) return; // a newer track was requested meanwhile
     if (!url) {
       notifyStatus('error');
