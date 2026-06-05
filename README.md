@@ -9,13 +9,13 @@ Metrolist Desktop brings the popular open-source Android music client to your co
 
 <img width="1150" height="849" alt="image" src="https://github.com/user-attachments/assets/4e91d39c-3fd3-409a-80c6-61f8e38c858d" />
 
-<img width="489" height="40" alt="image" src="https://github.com/user-attachments/assets/90a7717e-4134-4111-8160-1f588158670d" />
-
-
 ## Features
 * **Search Integration**: Unified search across music sources using `youtubei.js`.
 * **Native Desktop Controls**: Play, pause, resume, and volume management via system IPC.
 * **Resource Efficient**: Built with Tauri v2 for a small memory footprint and high performance.
+  
+<img width="489" height="40" alt="image" src="https://github.com/user-attachments/assets/90a7717e-4134-4111-8160-1f588158670d" />
+  
 * **Modern UI**: Styled with Tailwind CSS for a sleek, responsive interface.
 
 ## Prerequisites
