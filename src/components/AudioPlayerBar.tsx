@@ -87,7 +87,7 @@ export const AudioPlayerBar: React.FC<Props> = ({ onQueueToggle, queueOpen, onEx
         height: '110px',
         paddingLeft: '28px',
         paddingRight: '28px',
-        background: 'linear-gradient(180deg, rgba(8,8,11,0.92) 0%, rgba(5,5,7,0.96) 100%)',
+        background: 'linear-gradient(180deg, rgba(8,8,11,0.58) 0%, rgba(5,5,7,0.66) 100%)',
         borderTop: '1px solid rgba(201,168,76,0.12)',
         cursor: canExpand ? 'pointer' : 'default',
       }}
