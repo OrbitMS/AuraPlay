@@ -3,12 +3,14 @@ import { AudioProvider } from './context/AudioContext';
 import { SearchView } from './views/SearchView';
 import { FavoritesView } from './views/FavoritesView';
 import { AudioPlayerBar } from './components/AudioPlayerBar';
+import { QueueSidebar } from './components/QueueSidebar';
 import './App.css';
 
 type View = 'search' | 'favorites';
 
 function App() {
   const [view, setView] = useState<View>('search');
+  const [showQueue, setShowQueue] = useState(false);
 
   return (
     <AudioProvider>
@@ -78,9 +80,15 @@ function App() {
           <main className="flex-1 h-full overflow-y-auto bg-gradient-to-b from-[var(--s1)] to-[var(--void)]">
             {view === 'search' ? <SearchView /> : <FavoritesView />}
           </main>
+
+          {/* Queue Sidebar (overlay) */}
+          {showQueue && <QueueSidebar onClose={() => setShowQueue(false)} />}
         </div>
 
-        <AudioPlayerBar />
+        <AudioPlayerBar
+          onQueueToggle={() => setShowQueue(v => !v)}
+          queueOpen={showQueue}
+        />
       </div>
     </AudioProvider>
   );

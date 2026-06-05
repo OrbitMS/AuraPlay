@@ -1,7 +1,12 @@
 import React, { useContext, useRef } from 'react';
 import { AudioContext } from '../context/AudioContext';
 
-export const AudioPlayerBar: React.FC = () => {
+interface Props {
+  onQueueToggle: () => void;
+  queueOpen: boolean;
+}
+
+export const AudioPlayerBar: React.FC<Props> = ({ onQueueToggle, queueOpen }) => {
   const audioContext = useContext(AudioContext);
   const volumeBarRef = useRef<HTMLDivElement>(null);
   const draggingRef = useRef(false);
@@ -206,6 +211,26 @@ export const AudioPlayerBar: React.FC = () => {
           </div>
         </div>
         <span className="text-[9px] text-[var(--tt)] select-none min-w-[22px]" style={{ fontFamily: 'var(--fm)' }}>{volume}</span>
+
+        {/* Queue toggle */}
+        <button
+          onClick={onQueueToggle}
+          title={queueOpen ? 'Close queue' : 'Open queue'}
+          className={`ml-2 w-7 h-7 flex items-center justify-center rounded-[5px] border transition-colors ${
+            queueOpen
+              ? 'border-[rgba(201,168,76,0.4)] bg-[var(--gold-g)] text-[var(--gold)]'
+              : 'border-transparent text-[var(--tt)] hover:text-[var(--ts)] hover:bg-white/[0.04]'
+          }`}
+        >
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+            <line x1="8" y1="6" x2="21" y2="6"/>
+            <line x1="8" y1="12" x2="21" y2="12"/>
+            <line x1="8" y1="18" x2="21" y2="18"/>
+            <line x1="3" y1="6" x2="3.01" y2="6"/>
+            <line x1="3" y1="12" x2="3.01" y2="12"/>
+            <line x1="3" y1="18" x2="3.01" y2="18"/>
+          </svg>
+        </button>
       </div>
 
     </div>
