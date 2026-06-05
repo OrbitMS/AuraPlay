@@ -1,6 +1,9 @@
-import { Innertube, UniversalCache, type Types } from 'youtubei.js';
+import type { Innertube, Types } from 'youtubei.js';
 import { fetch as tauriFetch } from '@tauri-apps/plugin-http';
-import { BG } from 'bgutils-js';
+
+// youtubei.js (~650KB) is loaded lazily so it never blocks first paint.
+// The client is prewarmed during idle time; until then the app shell renders
+// without paying the parse cost.
 
 let yt: Innertube | null = null;
 let streamYt: Innertube | null = null;
@@ -32,6 +35,7 @@ const innertubeFetch = async (input: RequestInfo | URL, init?: RequestInit) => {
 
 export async function getClient() {
   if (!yt) {
+    const { Innertube, UniversalCache } = await import('youtubei.js');
     yt = await Innertube.create({
       fetch: innertubeFetch,
       cache: new UniversalCache(true),
@@ -53,6 +57,7 @@ const plainTauriFetch = ((input: RequestInfo | URL, init?: RequestInit) =>
 // Returns null if generation fails so callers can fall back to a plain client.
 async function generatePoToken(visitorData: string): Promise<string | null> {
   try {
+    const { BG } = await import('bgutils-js');
     const bgConfig = {
       fetch: plainTauriFetch,
       globalObj: window,
@@ -91,6 +96,7 @@ async function getStreamClient(): Promise<Innertube> {
   if (streamYt) return streamYt;
   if (!streamYtInit) {
     streamYtInit = (async () => {
+      const { Innertube, UniversalCache } = await import('youtubei.js');
       // A throwaway client gives us the visitor_data that ties the po_token to this session.
       const seed = await Innertube.create({ fetch: innertubeFetch, retrieve_player: false });
       const visitorData = seed.session.context.client.visitorData ?? '';
@@ -347,7 +353,17 @@ function normalizeFeedItem(item: any): FeedTrack | null {
   };
 }
 
-export async function searchMusic(query: string) {
+// Short-lived cache of search results so repeating a query (or returning to
+// a previous one) is instant instead of a fresh network round-trip.
+const searchCache = new Map<string, { at: number; data: SearchResult[] }>();
+const SEARCH_TTL_MS = 5 * 60 * 1000;
+type SearchResult = { id: string; name: string; artists: { name: string }[]; thumbnails: { url: string }[] };
+
+export async function searchMusic(query: string): Promise<SearchResult[]> {
+  const key = query.trim().toLowerCase();
+  const cached = searchCache.get(key);
+  if (cached && Date.now() - cached.at < SEARCH_TTL_MS) return cached.data;
+
   const client = await getClient();
   console.log(`🔍 Sending search query to YouTube: "${query}"`);
   const results = await client.music.search(query);
@@ -378,12 +394,12 @@ export async function searchMusic(query: string) {
     return type.includes('video') || type.includes('song') || type.includes('music') || item.id;
   });
 
-  return validTracks.map((track: any, index: number) => {
+  const mapped: SearchResult[] = validTracks.map((track: any, index: number) => {
     const id = track.id || track.video_id || track.videoId || '';
     let name = 'Unknown Title';
     if (typeof track.title === 'string') name = track.title;
     else if (track.title?.text) name = track.title.text;
-    
+
     let artistName = 'Unknown Artist';
     if (typeof track.author === 'string') artistName = track.author;
     else if (track.artists && track.artists[0]?.name) artistName = track.artists[0].name;
@@ -395,9 +411,12 @@ export async function searchMusic(query: string) {
       id: id || `fallback-id-${index}`,
       name,
       artists: [{ name: artistName }],
-      thumbnails: [{ url: thumbnailUrl }]
+      thumbnails: [{ url: thumbnailUrl }],
     };
   });
+
+  searchCache.set(key, { at: Date.now(), data: mapped });
+  return mapped;
 }
 
 // ============================================================================
