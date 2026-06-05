@@ -1,7 +1,8 @@
 import React, { useState, useContext } from 'react';
 import { searchMusic } from '../services/youtube';
 import { AudioContext, Track } from '../context/AudioContext';
-import { Search, Download, CheckCircle, Loader } from 'lucide-react';
+import { useLikes } from '../hooks/useLikes';
+import { Search, Download, CheckCircle, Loader, Heart } from 'lucide-react';
 
 export const SearchView: React.FC = () => {
   const [query, setQuery] = useState('');
@@ -12,6 +13,7 @@ export const SearchView: React.FC = () => {
   const currentTrackId = audioContext?.currentTrack?.id;
   const downloadedIds = audioContext?.downloadedIds ?? new Set<string>();
   const downloadingIds = audioContext?.downloadingIds ?? new Set<string>();
+  const { toggle: toggleLike, isLiked } = useLikes();
 
   const handleWheel = (e: React.WheelEvent) => {
     const delta = e.deltaY > 0 ? -0.05 : 0.05;
@@ -87,10 +89,11 @@ export const SearchView: React.FC = () => {
       </form>
 
       {/* Grid Headers */}
-      <div className="grid grid-cols-[30px_1fr_160px_32px] gap-x-[14px] px-[10px] pb-[8px] border-b border-[var(--bd)] mb-[2px]">
+      <div className="grid grid-cols-[30px_1fr_160px_32px_32px] gap-x-[14px] px-[10px] pb-[8px] border-b border-[var(--bd)] mb-[2px]">
         <div className="text-[8px] text-[var(--tt)] tracking-[0.1em] uppercase" style={{ fontFamily: 'var(--fm)' }}>#</div>
         <div className="text-[8px] text-[var(--tt)] tracking-[0.1em] uppercase" style={{ fontFamily: 'var(--fm)' }}>Track</div>
         <div className="text-[8px] text-[var(--tt)] tracking-[0.1em] uppercase" style={{ fontFamily: 'var(--fm)' }}>Artist</div>
+        <div></div>
         <div></div>
       </div>
 
@@ -99,11 +102,13 @@ export const SearchView: React.FC = () => {
           const active = currentTrackId === song.id;
           const isDownloaded = downloadedIds.has(song.id);
           const isDownloading = downloadingIds.has(song.id);
+          const liked = isLiked(song.id);
+          const track = toTrack(song);
           return (
             <div
               key={song.id}
               onClick={() => playSong(song)}
-              className={`grid grid-cols-[30px_1fr_160px_32px] gap-x-[14px] items-center px-[10px] py-[7px] rounded-[5px] cursor-pointer border-l-2 transition-colors ${active ? 'bg-[var(--gold-g)] border-[var(--gold)]' : 'border-transparent hover:bg-white/[0.025]'}`}
+              className={`grid grid-cols-[30px_1fr_160px_32px_32px] gap-x-[14px] items-center px-[10px] py-[7px] rounded-[5px] cursor-pointer border-l-2 transition-colors ${active ? 'bg-[var(--gold-g)] border-[var(--gold)]' : 'border-transparent hover:bg-white/[0.025]'}`}
             >
               <span className="text-[10px] text-[var(--tt)] text-center" style={{ fontFamily: 'var(--fm)' }}>
                 {active ? (
@@ -119,6 +124,18 @@ export const SearchView: React.FC = () => {
                 <span className={`text-[12px] font-medium tracking-[0.01em] truncate ${active ? 'text-[var(--gold)]' : 'text-[var(--tp)]'}`}>{song.name}</span>
               </div>
               <span className="text-[10px] text-[var(--ts)] truncate tracking-[0.02em]" style={{ fontFamily: 'var(--fm)' }}>{song.artists?.[0]?.name}</span>
+              <button
+                onClick={(e) => { e.stopPropagation(); toggleLike(track); }}
+                title={liked ? 'Remove from favorites' : 'Add to favorites'}
+                className="flex items-center justify-center w-7 h-7 rounded-[4px] transition-colors hover:bg-white/[0.06]"
+              >
+                <Heart
+                  size={13}
+                  fill={liked ? '#c9a84c' : 'none'}
+                  stroke={liked ? '#c9a84c' : 'var(--tt)'}
+                  className="transition-all"
+                />
+              </button>
               <button
                 onClick={(e) => handleDownload(e, song)}
                 title={isDownloaded ? 'Remove download' : isDownloading ? 'Downloading…' : 'Download for offline'}
