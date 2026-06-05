@@ -13,6 +13,7 @@ import {
   listDownloaded,
   deleteDownload,
 } from '../services/offline';
+import { useHistory } from '../hooks/useHistory';
 import { getNextIndex, cycleRepeatMode, type RepeatMode } from '../lib/queue';
 
 export interface Track {
@@ -57,6 +58,7 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [volume, setVolumeState] = useState<number>(70); // Initialize standard fallback volume at 70%
   const [downloadedIds, setDownloadedIds] = useState<Set<string>>(new Set());
   const [downloadingIds, setDownloadingIds] = useState<Set<string>>(new Set());
+  const { push: pushHistory } = useHistory();
 
   const currentTrack = currentIndex >= 0 && currentIndex < queue.length ? queue[currentIndex] : null;
 
@@ -97,6 +99,7 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         case 'playing':
           skipCountRef.current = 0;
           setIsPlaying(true);
+          if (currentTrack) pushHistory(currentTrack);
           break;
         case 'paused':
           setIsPlaying(false);

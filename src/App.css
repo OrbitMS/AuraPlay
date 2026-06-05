@@ -87,6 +87,9 @@ html, body, #root {
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }
 }
-.animate-spin-slow { 
-  animation: spin 4s linear infinite; 
+.animate-spin-slow {
+  animation: spin 4s linear infinite;
 }
+
+.scrollbar-hide::-webkit-scrollbar { display: none; }
+.scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }

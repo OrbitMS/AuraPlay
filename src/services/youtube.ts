@@ -105,6 +105,60 @@ async function getStreamClient() {
   return streamYt;
 }
 
+type FeedTrack = { id: string; name: string; artists: { name: string }[]; thumbnails: { url: string }[] };
+
+export async function getHomeFeed(): Promise<{ title: string; tracks: FeedTrack[] }[]> {
+  const client = await getClient();
+  const feed = await client.music.getHomeFeed();
+  const sections: { title: string; tracks: FeedTrack[] }[] = [];
+
+  for (const shelf of feed.sections ?? []) {
+    const rawTitle = (shelf as any).header?.title;
+    const title: string =
+      typeof rawTitle === 'string' ? rawTitle : rawTitle?.text ?? rawTitle?.runs?.[0]?.text ?? '';
+    const items: any[] = (shelf as any).contents ?? [];
+    const tracks: FeedTrack[] = [];
+    for (const item of items) {
+      const t = normalizeTrack(item);
+      if (t && t.id) tracks.push(t as FeedTrack);
+    }
+    if (tracks.length > 0) sections.push({ title, tracks });
+    if (sections.length >= 4) break; // only surface top sections
+  }
+  return sections;
+}
+
+function normalizeTrack(item: any) {
+  if (!item) return null;
+  const id = item.id ?? item.video_id ?? item.videoId ?? '';
+  if (!id) return null;
+
+  let name = 'Unknown';
+  if (typeof item.title === 'string') name = item.title;
+  else if (item.title?.text) name = item.title.text;
+  else if (item.title?.runs?.[0]?.text) name = item.title.runs[0].text;
+
+  let artist = '';
+  if (typeof item.author === 'string') artist = item.author;
+  else if (item.artists?.[0]?.name) artist = item.artists[0].name;
+  else if (item.subtitle?.runs) {
+    artist = item.subtitle.runs
+      .filter((r: any) => r.text && r.text !== ' • ' && !/^\d{4}$/.test(r.text.trim()))
+      .map((r: any) => r.text)
+      .join('') || '';
+  }
+
+  const thumbnail: string =
+    item.thumbnails?.[0]?.url ?? item.thumbnail?.thumbnails?.[0]?.url ?? '';
+
+  return {
+    id,
+    name,
+    artists: [{ name: artist }],
+    thumbnails: [{ url: thumbnail }],
+  };
+}
+
 export async function searchMusic(query: string) {
   const client = await getClient();
   console.log(`🔍 Sending search query to YouTube: "${query}"`);
