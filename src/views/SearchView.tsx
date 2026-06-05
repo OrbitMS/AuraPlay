@@ -1,5 +1,5 @@
 import React, { useState, useContext } from 'react';
-import { searchMusic, prefetchStreamUrl } from '../services/youtube';
+import { searchMusic } from '../services/youtube';
 import { AudioContext, Track } from '../context/AudioContext';
 import { useLikes } from '../hooks/useLikes';
 import { HomeContent } from '../components/HomeContent';
@@ -116,7 +116,6 @@ export const SearchView: React.FC = () => {
             <div
               key={song.id}
               onClick={() => playSong(song)}
-              onMouseEnter={() => prefetchStreamUrl(song.id)}
               className={`grid grid-cols-[30px_1fr_160px_32px_32px] gap-x-[14px] items-center px-[10px] py-[7px] rounded-[5px] cursor-pointer border-l-2 transition-colors ${active ? 'bg-[var(--gold-g)] border-[var(--gold)]' : 'border-transparent hover:bg-white/[0.025]'}`}
             >
               <span className="text-[10px] text-[var(--tt)] text-center" style={{ fontFamily: 'var(--fm)' }}>

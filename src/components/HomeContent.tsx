@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useContext } from 'react';
-import { getHomeFeed, searchMusic, prefetchStreamUrl } from '../services/youtube';
+import { getHomeFeed, searchMusic } from '../services/youtube';
 import { AudioContext, type Track } from '../context/AudioContext';
 import { useHistory } from '../hooks/useHistory';
 import { useLikes } from '../hooks/useLikes';
@@ -33,19 +33,22 @@ function TrackCard({
   return (
     <div
       onClick={onPlay}
-      onMouseEnter={() => prefetchStreamUrl(song.id)}
       className={`group relative flex-shrink-0 w-[120px] cursor-pointer rounded-[8px] p-2.5 transition-colors ${
         active ? 'bg-[var(--gold-g)]' : 'hover:bg-white/[0.04]'
       }`}
     >
       <div className="relative mb-2.5">
-        <img
-          src={song.thumbnails?.[0]?.url}
-          alt={song.name}
-          className={`w-full aspect-square object-cover rounded-[6px] border ${
-            active ? 'border-[rgba(201,168,76,0.4)]' : 'border-[var(--bd)]'
-          } bg-[var(--s2)]`}
-        />
+        {song.thumbnails?.[0]?.url ? (
+          <img
+            src={song.thumbnails[0].url}
+            alt={song.name}
+            className={`w-full aspect-square object-cover rounded-[6px] border ${
+              active ? 'border-[rgba(201,168,76,0.4)]' : 'border-[var(--bd)]'
+            } bg-[var(--s2)]`}
+          />
+        ) : (
+          <div className={`w-full aspect-square rounded-[6px] border bg-[var(--s2)] ${active ? 'border-[rgba(201,168,76,0.4)]' : 'border-[var(--bd)]'}`} />
+        )}
         {/* Play overlay */}
         <div className="absolute inset-0 flex items-center justify-center rounded-[6px] bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity">
           <div className="w-8 h-8 rounded-full bg-[var(--gold)] flex items-center justify-center shadow-lg">
