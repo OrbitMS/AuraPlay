@@ -1,6 +1,6 @@
 import React, { useContext, useRef, useState } from 'react';
 import { AudioContext } from '../context/AudioContext';
-import { X, ListMusic, GripVertical, Trash2 } from 'lucide-react';
+import { X, ListMusic, GripVertical, Trash2, Infinity } from 'lucide-react';
 
 interface Props {
   onClose: () => void;
@@ -12,7 +12,10 @@ export const QueueSidebar: React.FC<Props> = ({ onClose }) => {
   const [dropTarget, setDropTarget] = useState<number | null>(null);
 
   if (!ctx) return null;
-  const { queue, currentIndex, playAtIndex, removeFromQueue, reorderQueue, stopTrack } = ctx;
+  const {
+    queue, currentIndex, playAtIndex, removeFromQueue, reorderQueue, stopTrack,
+    autoQueue, autoQueueStart, toggleAutoQueue,
+  } = ctx;
 
   /* ── Drag-to-reorder ─────────────────────────────────────── */
   const onDragStart = (e: React.DragEvent, index: number) => {
@@ -67,6 +70,20 @@ export const QueueSidebar: React.FC<Props> = ({ onClose }) => {
             </span>
           </div>
           <div className="flex items-center gap-1">
+            {/* Auto-queue toggle */}
+            <button
+              onClick={toggleAutoQueue}
+              title={autoQueue ? 'Auto-queue on — click to disable' : 'Auto-queue off — click to enable'}
+              className={`flex items-center gap-1 px-2 py-1 rounded-[4px] text-[10px] transition-colors ${
+                autoQueue
+                  ? 'text-[var(--gold)] bg-[var(--gold-g)]'
+                  : 'text-[var(--tt)] hover:text-[var(--ts)] hover:bg-white/[0.04]'
+              }`}
+              style={{ fontFamily: 'var(--fm)' }}
+            >
+              <Infinity size={10} />
+              Auto
+            </button>
             {queue.length > 0 && (
               <button
                 onClick={stopTrack}
@@ -122,31 +139,64 @@ export const QueueSidebar: React.FC<Props> = ({ onClose }) => {
               )}
 
               {/* Up Next */}
-              {upNext.length > 0 && (
-                <div className="px-3 mt-2">
-                  <div className="px-2 py-1.5 text-[8px] font-bold tracking-[0.14em] uppercase text-[var(--tt)]">
-                    Up Next
+              {upNext.length > 0 && (() => {
+                // Split up-next into manually queued and auto-suggested
+                const autoStart = autoQueueStart !== null ? Math.max(0, autoQueueStart - (currentIndex + 1)) : upNext.length;
+                const manual = upNext.slice(0, autoStart);
+                const suggested = upNext.slice(autoStart);
+                return (
+                  <div className="px-3 mt-2">
+                    {manual.length > 0 && (
+                      <>
+                        <div className="px-2 py-1.5 text-[8px] font-bold tracking-[0.14em] uppercase text-[var(--tt)]">
+                          Up Next
+                        </div>
+                        {manual.map((track, i) => {
+                          const queueIdx = currentIndex + 1 + i;
+                          return (
+                            <QueueRow
+                              key={`${track.id}-${queueIdx}`}
+                              track={track} index={queueIdx} isActive={false}
+                              onPlay={() => playAtIndex(queueIdx)}
+                              onRemove={() => removeFromQueue(queueIdx)}
+                              onDragStart={onDragStart} onDragOver={onDragOver}
+                              onDrop={onDrop} onDragEnd={onDragEnd}
+                              isDropTarget={dropTarget === queueIdx}
+                            />
+                          );
+                        })}
+                      </>
+                    )}
+                    {suggested.length > 0 && (
+                      <>
+                        {/* Suggested divider */}
+                        <div className="flex items-center gap-2 px-2 py-2 mt-1">
+                          <div className="h-px flex-1 bg-[var(--bd)]" />
+                          <div className="flex items-center gap-1 text-[8px] font-bold tracking-[0.14em] uppercase text-[var(--tt)]">
+                            <Infinity size={8} className={autoQueue ? 'text-[var(--gold)]' : ''} />
+                            Suggested
+                          </div>
+                          <div className="h-px flex-1 bg-[var(--bd)]" />
+                        </div>
+                        {suggested.map((track, i) => {
+                          const queueIdx = currentIndex + 1 + autoStart + i;
+                          return (
+                            <QueueRow
+                              key={`${track.id}-${queueIdx}`}
+                              track={track} index={queueIdx} isActive={false}
+                              onPlay={() => playAtIndex(queueIdx)}
+                              onRemove={() => removeFromQueue(queueIdx)}
+                              onDragStart={onDragStart} onDragOver={onDragOver}
+                              onDrop={onDrop} onDragEnd={onDragEnd}
+                              isDropTarget={dropTarget === queueIdx}
+                            />
+                          );
+                        })}
+                      </>
+                    )}
                   </div>
-                  {upNext.map((track, i) => {
-                    const queueIdx = currentIndex + 1 + i;
-                    return (
-                      <QueueRow
-                        key={`${track.id}-${queueIdx}`}
-                        track={track}
-                        index={queueIdx}
-                        isActive={false}
-                        onPlay={() => playAtIndex(queueIdx)}
-                        onRemove={() => removeFromQueue(queueIdx)}
-                        onDragStart={onDragStart}
-                        onDragOver={onDragOver}
-                        onDrop={onDrop}
-                        onDragEnd={onDragEnd}
-                        isDropTarget={dropTarget === queueIdx}
-                      />
-                    );
-                  })}
-                </div>
-              )}
+                );
+              })()}
 
               {/* Previously Played */}
               {played.length > 0 && (
