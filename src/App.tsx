@@ -9,6 +9,7 @@ const FavoritesView  = lazy(() => import('./views/FavoritesView').then(m => ({ d
 const SettingsView   = lazy(() => import('./views/SettingsView').then(m => ({ default: m.SettingsView })));
 const RadioView      = lazy(() => import('./views/RadioView').then(m => ({ default: m.RadioView })));
 const DownloadedView = lazy(() => import('./views/DownloadedView').then(m => ({ default: m.DownloadedView })));
+const PlaylistsView  = lazy(() => import('./views/PlaylistsView').then(m => ({ default: m.PlaylistsView })));
 import { QueueSidebar } from './components/QueueSidebar';
 import { NowPlayingScreen } from './components/NowPlayingScreen';
 import { ErrorBoundary } from './components/ErrorBoundary';
@@ -17,7 +18,7 @@ import { useSettings } from './hooks/useSettings';
 import { setAudioQuality } from './services/youtube';
 import './App.css';
 
-type View = 'search' | 'favorites' | 'radio' | 'settings' | 'downloaded';
+type View = 'search' | 'favorites' | 'radio' | 'settings' | 'downloaded' | 'playlists';
 
 const clamp = (v: number, lo: number, hi: number) => Math.min(Math.max(v, lo), hi);
 const numFromLS = (key: string, def: number) => {
@@ -133,6 +134,9 @@ function App() {
               <NavItem active={view === 'favorites'} onClick={() => setView('favorites')}
                 icon={<svg viewBox="0 0 24 24" fill={view === 'favorites' ? '#c9a84c' : 'none'} stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="w-[19px] h-[19px] flex-shrink-0"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78L12 21.23l8.84-8.84a5.5 5.5 0 0 0 0-7.78z"/></svg>}
                 label="Favorites" />
+              <NavItem active={view === 'playlists'} onClick={() => setView('playlists')}
+                icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="w-[19px] h-[19px] flex-shrink-0"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="14" y2="18"/><circle cx="18" cy="17" r="3"/></svg>}
+                label="Playlists" />
               <NavItem active={view === 'downloaded'} onClick={() => setView('downloaded')}
                 icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="w-[19px] h-[19px] flex-shrink-0"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>}
                 label="Downloaded" />
@@ -153,6 +157,7 @@ function App() {
               {view === 'search' && <SearchView />}
               <Suspense fallback={<ViewLoader />}>
                 {view === 'favorites'  && <FavoritesView />}
+                {view === 'playlists'  && <PlaylistsView />}
                 {view === 'downloaded' && <DownloadedView />}
                 {view === 'radio'      && <RadioView />}
                 {view === 'settings'  && (

@@ -117,6 +117,66 @@ type FeedTrack = {
   itemType?: 'song' | 'video' | 'album'; // album cards need different click handling
 };
 
+// Extracts a playlist ID from a URL (?list=…) or returns the raw ID as-is.
+function extractPlaylistId(input: string): string {
+  const trimmed = input.trim();
+  const m = trimmed.match(/[?&]list=([a-zA-Z0-9_-]+)/);
+  return m ? m[1] : trimmed;
+}
+
+/** Fetches the tracks of a YouTube / YouTube Music playlist by URL or ID. */
+export async function getYouTubePlaylistTracks(input: string): Promise<
+  { id: string; title: string; artist: string; thumbnail: string }[]
+> {
+  const id = extractPlaylistId(input);
+  const client = await getClient();
+  const playlist = await client.getPlaylist(id);
+  const out: { id: string; title: string; artist: string; thumbnail: string }[] = [];
+
+  for (const item of (playlist.items as any[]) ?? []) {
+    const vid: string = item.id ?? item.video_id ?? '';
+    if (!vid) continue;
+    const title = item.title?.toString?.() ?? (typeof item.title === 'string' ? item.title : 'Unknown');
+    const artist: string = item.author?.name ?? '';
+    const thumbs: any[] = Array.isArray(item.thumbnails) ? item.thumbnails : [];
+    const thumbnail = thumbs[thumbs.length - 1]?.url ?? thumbs[0]?.url ?? '';
+    out.push({ id: vid, title, artist, thumbnail });
+  }
+  return out;
+}
+
+/** Searches for one track and returns the best candidate, or null. Used by import matching. */
+export async function matchTrack(title: string, artist: string): Promise<
+  { id: string; title: string; artist: string; thumbnail: string; confidence: 'high' | 'low' } | null
+> {
+  const query = `${artist} ${title}`.trim();
+  let results: any[] = [];
+  try { results = await searchMusic(query); } catch { return null; }
+  if (!results.length) return null;
+
+  const norm = (s: string) => s.toLowerCase().replace(/\([^)]*\)|\[[^\]]*\]/g, '').replace(/[^a-z0-9 ]/g, '').replace(/\s+/g, ' ').trim();
+  const nTitle = norm(title);
+  const nArtist = norm(artist);
+
+  const scored = results.slice(0, 5).map(r => {
+    const rTitle = norm(r.name ?? '');
+    const rArtist = norm(r.artists?.[0]?.name ?? '');
+    let score = 0;
+    if (rTitle === nTitle) score += 3;
+    else if (nTitle && (rTitle.includes(nTitle) || nTitle.includes(rTitle))) score += 2;
+    else if (nTitle && nTitle.split(' ').filter(w => rTitle.includes(w)).length >= Math.ceil(nTitle.split(' ').length / 2)) score += 1;
+    if (nArtist && (rArtist.includes(nArtist) || nArtist.includes(rArtist))) score += 2;
+    return { r, score };
+  }).sort((a, b) => b.score - a.score);
+
+  const best = scored[0];
+  const r = best && best.score > 0 ? best.r : results[0];
+  return {
+    id: r.id, title: r.name, artist: r.artists?.[0]?.name ?? '', thumbnail: r.thumbnails?.[0]?.url ?? '',
+    confidence: best && best.score >= 4 ? 'high' : 'low',
+  };
+}
+
 // Fetches all playable tracks from a YouTube Music album by its browse ID.
 export async function getAlbumTracks(browseId: string): Promise<
   { id: string; title: string; artist: string; thumbnail: string }[]
