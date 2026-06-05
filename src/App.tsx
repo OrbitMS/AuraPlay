@@ -1,10 +1,13 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, lazy, Suspense } from 'react';
 import { AudioProvider } from './context/AudioContext';
 import { SearchView } from './views/SearchView';
-import { FavoritesView } from './views/FavoritesView';
-import { SettingsView } from './views/SettingsView';
-import { RadioView } from './views/RadioView';
 import { AudioPlayerBar } from './components/AudioPlayerBar';
+
+// Lazy-loaded: only parsed/fetched when the user first opens them, keeping the
+// initial bundle small and first paint fast.
+const FavoritesView = lazy(() => import('./views/FavoritesView').then(m => ({ default: m.FavoritesView })));
+const SettingsView  = lazy(() => import('./views/SettingsView').then(m => ({ default: m.SettingsView })));
+const RadioView     = lazy(() => import('./views/RadioView').then(m => ({ default: m.RadioView })));
 import { QueueSidebar } from './components/QueueSidebar';
 import { NowPlayingScreen } from './components/NowPlayingScreen';
 import { useSettings } from './hooks/useSettings';
@@ -83,15 +86,17 @@ function App() {
           {/* ── Main Content ─────────────────────────────────────────────────── */}
           <main className="flex-1 h-full overflow-y-auto relative"
             style={{ background: 'linear-gradient(180deg, #131318 0%, #0f0f12 100%)' }}>
-            {view === 'search'    && <SearchView />}
-            {view === 'favorites' && <FavoritesView />}
-            {view === 'radio'     && <RadioView />}
-            {view === 'settings'  && (
-              <SettingsView
-                quality={settings.audioQuality}
-                onQualityChange={q => updateSettings({ audioQuality: q })}
-              />
-            )}
+            {view === 'search' && <SearchView />}
+            <Suspense fallback={<ViewLoader />}>
+              {view === 'favorites' && <FavoritesView />}
+              {view === 'radio'     && <RadioView />}
+              {view === 'settings'  && (
+                <SettingsView
+                  quality={settings.audioQuality}
+                  onQualityChange={q => updateSettings({ audioQuality: q })}
+                />
+              )}
+            </Suspense>
           </main>
 
           {/* Queue Sidebar overlay */}
@@ -112,6 +117,16 @@ function App() {
 }
 
 /* ── Reusable sidebar primitives ──────────────────────────────────────────── */
+
+function ViewLoader() {
+  return (
+    <div className="flex items-center justify-center h-full">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" strokeWidth="2" strokeLinecap="round" className="animate-spin">
+        <path d="M12 2a10 10 0 1 0 0 20" />
+      </svg>
+    </div>
+  );
+}
 
 function SectionLabel({ children }: { children: React.ReactNode }) {
   return (

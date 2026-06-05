@@ -12,6 +12,21 @@ export default defineConfig(async () => ({
     tailwindcss() // 2. Add it to the plugins array
   ],
 
+  // Split heavy dependencies into their own chunks so the main app bundle is
+  // small and the big youtubei.js library is cached separately from app code.
+  build: {
+    chunkSizeWarningLimit: 1200,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          youtubei: ['youtubei.js', 'bgutils-js'],
+          react: ['react', 'react-dom'],
+          icons: ['lucide-react'],
+        },
+      },
+    },
+  },
+
   // Vite options tailored for Tauri development and only applied in `tauri dev` or `tauri build`
   clearScreen: false,
   server: {

@@ -456,8 +456,11 @@ export function seekTo(seconds: number): void {
 
 export function initAudioPlayer(): void {
   ensureAudio();
-  // Pre-warm the stream client in the background so the first play is fast
+  // Pre-warm both clients in parallel in the background:
+  //  - stream client (player + po_token) → first PLAY is fast
+  //  - search client → first RECOMMENDATIONS / search is fast
   getStreamClient().catch(() => {});
+  getClient().catch(() => {});
 }
 
 // Resolves a playable audio-only stream URL for a video id. Tries the web
