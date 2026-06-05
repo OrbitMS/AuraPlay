@@ -40,13 +40,20 @@ async function apiFetch(path: string): Promise<Response> {
 }
 
 function clean(stations: RadioStation[]): RadioStation[] {
-  return stations.filter(
-    s => s.url_resolved && s.bitrate >= 64 && !s.url_resolved.endsWith('.m3u')
-  );
+  const seen = new Set<string>();
+  return stations
+    .filter(s => s.url_resolved && s.bitrate >= 64 && !s.url_resolved.endsWith('.m3u'))
+    .filter(s => {
+      // Dedupe by normalized station name so repeated relays don't crowd the list
+      const key = s.name.trim().toLowerCase();
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
 }
 
 /** Top-voted stations globally */
-export async function fetchTopStations(limit = 40): Promise<RadioStation[]> {
+export async function fetchTopStations(limit = 120): Promise<RadioStation[]> {
   const r = await apiFetch(
     `/json/stations/topvote/${limit}?hidebroken=true`
   );
@@ -54,7 +61,7 @@ export async function fetchTopStations(limit = 40): Promise<RadioStation[]> {
 }
 
 /** Stations filtered by genre tag */
-export async function fetchStationsByTag(tag: string, limit = 40): Promise<RadioStation[]> {
+export async function fetchStationsByTag(tag: string, limit = 120): Promise<RadioStation[]> {
   const params = new URLSearchParams({
     tag,
     limit: String(limit),
@@ -67,7 +74,7 @@ export async function fetchStationsByTag(tag: string, limit = 40): Promise<Radio
 }
 
 /** Text search by station name */
-export async function searchStations(query: string, limit = 40): Promise<RadioStation[]> {
+export async function searchStations(query: string, limit = 100): Promise<RadioStation[]> {
   const params = new URLSearchParams({
     name: query,
     limit: String(limit),

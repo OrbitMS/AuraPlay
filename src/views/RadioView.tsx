@@ -10,17 +10,28 @@ import { AudioContext } from '../context/AudioContext';
 import { Search, Radio, Loader } from 'lucide-react';
 
 const GENRES: { id: string; label: string; tag: string | null }[] = [
-  { id: 'top',       label: '⭐ Top',       tag: null },
-  { id: 'pop',       label: 'Pop',         tag: 'pop' },
-  { id: 'rock',      label: 'Rock',        tag: 'rock' },
-  { id: 'jazz',      label: 'Jazz',        tag: 'jazz' },
-  { id: 'classical', label: 'Classical',   tag: 'classical' },
-  { id: 'electronic',label: 'Electronic',  tag: 'electronic' },
-  { id: 'hiphop',    label: 'Hip-Hop',     tag: 'hiphop' },
-  { id: 'rnb',       label: 'R&B / Soul',  tag: 'rnb' },
-  { id: 'ambient',   label: 'Ambient',     tag: 'ambient' },
-  { id: 'news',      label: 'News',        tag: 'news' },
-  { id: 'lofi',      label: 'Lo-Fi',       tag: 'lofi' },
+  { id: 'top',        label: '⭐ Top',      tag: null },
+  { id: 'pop',        label: 'Pop',         tag: 'pop' },
+  { id: 'rock',       label: 'Rock',        tag: 'rock' },
+  { id: 'indie',      label: 'Indie',       tag: 'indie' },
+  { id: 'jazz',       label: 'Jazz',        tag: 'jazz' },
+  { id: 'classical',  label: 'Classical',   tag: 'classical' },
+  { id: 'electronic', label: 'Electronic',  tag: 'electronic' },
+  { id: 'house',      label: 'House',       tag: 'house' },
+  { id: 'techno',     label: 'Techno',      tag: 'techno' },
+  { id: 'hiphop',     label: 'Hip-Hop',     tag: 'hiphop' },
+  { id: 'rnb',        label: 'R&B / Soul',  tag: 'rnb' },
+  { id: 'funk',       label: 'Funk',        tag: 'funk' },
+  { id: 'reggae',     label: 'Reggae',      tag: 'reggae' },
+  { id: 'metal',      label: 'Metal',       tag: 'metal' },
+  { id: 'country',    label: 'Country',     tag: 'country' },
+  { id: 'blues',      label: 'Blues',       tag: 'blues' },
+  { id: 'latin',      label: 'Latin',       tag: 'latin' },
+  { id: 'kpop',       label: 'K-Pop',       tag: 'kpop' },
+  { id: 'ambient',    label: 'Ambient',     tag: 'ambient' },
+  { id: 'lofi',       label: 'Lo-Fi',       tag: 'lofi' },
+  { id: 'chillout',   label: 'Chillout',    tag: 'chillout' },
+  { id: 'news',       label: 'News',        tag: 'news' },
 ];
 
 function codecBadge(codec: string): string {
@@ -164,17 +175,42 @@ export const RadioView: React.FC = () => {
         Ad-free · High Quality · Live Streams
       </div>
 
-      {/* Search */}
-      <div className="relative mt-5 mb-4">
-        <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--tt)]" />
-        <input
-          type="text"
-          value={query}
-          onChange={e => { setQuery(e.target.value); if (!e.target.value) setGenre('top'); }}
-          placeholder="Search stations…"
-          className="w-full max-w-[360px] bg-[var(--s1)] border border-[var(--bs)] rounded-[7px] py-2.5 pr-3 pl-[34px] text-[12px] text-[var(--tp)] tracking-[0.01em] outline-none focus:border-[var(--bm)]"
-        />
-      </div>
+      {/* Search — matches the Music search bar */}
+      <form
+        onSubmit={e => { e.preventDefault(); if (query.trim()) { if (searchTimeout.current) clearTimeout(searchTimeout.current); setLoading(true); searchStations(query).then(setStations).catch(() => {}).finally(() => setLoading(false)); } }}
+        className="flex gap-3 mt-7 mb-6"
+        style={{ maxWidth: 560 }}
+      >
+        <div className="relative flex-1">
+          <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--tt)] pointer-events-none" />
+          <input
+            type="text"
+            value={query}
+            onChange={e => { setQuery(e.target.value); if (!e.target.value) setGenre('top'); }}
+            placeholder="Search stations…"
+            className="w-full rounded-[12px] outline-none transition-all"
+            style={{
+              height: 52, paddingLeft: 46, paddingRight: 16, fontSize: 15,
+              letterSpacing: '0.01em', color: 'var(--tp)', background: 'var(--s1)', border: '1px solid var(--bs)',
+            }}
+            onFocus={e => { e.currentTarget.style.borderColor = 'rgba(201,168,76,0.45)'; e.currentTarget.style.background = 'var(--s2)'; }}
+            onBlur={e => { e.currentTarget.style.borderColor = 'var(--bs)'; e.currentTarget.style.background = 'var(--s1)'; }}
+          />
+        </div>
+        <button
+          type="submit"
+          className="flex items-center justify-center gap-2 rounded-[12px] cursor-pointer whitespace-nowrap hover:scale-[1.03] active:scale-95 transition-transform"
+          style={{
+            height: 52, padding: '0 26px', border: 'none',
+            background: 'linear-gradient(135deg, var(--gold-b), var(--gold))', color: 'var(--obsidian)',
+            fontSize: 13, fontWeight: 700, letterSpacing: '0.07em', textTransform: 'uppercase',
+            boxShadow: '0 4px 18px rgba(201,168,76,0.3)',
+          }}
+        >
+          <Search size={16} strokeWidth={2.5} />
+          Search
+        </button>
+      </form>
 
       {/* Genre chips */}
       {!query.trim() && (

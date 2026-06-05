@@ -28,16 +28,16 @@ function App() {
 
   return (
     <AudioProvider>
-      {/* Slightly translucent shell — desktop/acrylic shows through for depth */}
+      {/* Translucent shell — desktop/acrylic shows through for depth */}
       <div className="h-screen w-screen overflow-hidden flex flex-col"
-        style={{ background: 'rgba(12,12,16,0.86)' }}>
+        style={{ background: 'transparent' }}>
 
         <div className="flex flex-1 min-h-0 overflow-hidden">
 
           {/* ── Sidebar ─────────────────────────────────────────────────────── */}
           <aside className="hidden sm:flex w-[230px] flex-shrink-0 flex-col"
             style={{
-              background: 'linear-gradient(180deg, #0c0c10 0%, #0a0a0c 100%)',
+              background: 'linear-gradient(180deg, rgba(12,12,16,0.55) 0%, rgba(9,9,12,0.6) 100%)',
               borderRight: '1px solid rgba(255,255,255,0.05)',
             }}
           >
@@ -92,7 +92,7 @@ function App() {
 
           {/* ── Main Content ─────────────────────────────────────────────────── */}
           <main className="flex-1 h-full overflow-y-auto relative"
-            style={{ background: 'linear-gradient(180deg, #131318 0%, #0f0f12 100%)' }}>
+            style={{ background: 'linear-gradient(180deg, rgba(18,18,24,0.40) 0%, rgba(14,14,18,0.50) 100%)' }}>
             <ErrorBoundary label={view} resetKey={view}>
               {view === 'search' && <SearchView />}
               <Suspense fallback={<ViewLoader />}>
