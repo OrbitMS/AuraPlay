@@ -8,6 +8,10 @@ Download latest Version on the right (.exe) -> install and enjoy!
 
 ---
 
+<img width="960" height="487" alt="image" src="https://github.com/user-attachments/assets/f977536a-66e0-42fd-83a1-ed62c59c7550" /> <img width="960" height="487" alt="image" src="https://github.com/user-attachments/assets/c5b920d2-67d3-40b9-bbb2-bd188a998111" />
+
+
+
 ## ✨ Features
 
 ### Music
