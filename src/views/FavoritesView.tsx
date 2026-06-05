@@ -2,6 +2,7 @@ import React, { useContext } from 'react';
 import { AudioContext } from '../context/AudioContext';
 import type { Track } from '../context/AudioContext';
 import { useLikes } from '../hooks/useLikes';
+import { safeImageUrl } from '../lib/safeUrl';
 import { Heart } from 'lucide-react';
 
 export const FavoritesView: React.FC = () => {
@@ -67,7 +68,7 @@ export const FavoritesView: React.FC = () => {
                   </span>
                   <div className="flex items-center gap-2.5 overflow-hidden">
                     <img
-                      src={track.thumbnail}
+                      src={safeImageUrl(track.thumbnail)}
                       className={`w-9 h-9 rounded-[4px] object-cover bg-[var(--s2)] flex-shrink-0 border ${active ? 'border-[rgba(201,168,76,0.3)]' : 'border-[var(--bd)]'}`}
                     />
                     <span className={`text-[12px] font-medium tracking-[0.01em] truncate ${active ? 'text-[var(--gold)]' : 'text-[var(--tp)]'}`}>

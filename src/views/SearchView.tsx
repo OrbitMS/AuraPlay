@@ -4,6 +4,7 @@ import { AudioContext, Track } from '../context/AudioContext';
 import { useLikes } from '../hooks/useLikes';
 import { HomeContent } from '../components/HomeContent';
 import { AddToPlaylistButton } from '../components/AddToPlaylistButton';
+import { safeImageUrl } from '../lib/safeUrl';
 import { Search, Download, CheckCircle, Loader, Heart, Minus, Plus } from 'lucide-react';
 
 export const SearchView: React.FC = () => {
@@ -179,7 +180,7 @@ export const SearchView: React.FC = () => {
                 )}
               </span>
               <div className="flex items-center gap-2.5 overflow-hidden">
-                <img src={song.thumbnails?.[0]?.url} className={`w-9 h-9 rounded-[4px] object-cover bg-[var(--s2)] flex-shrink-0 border ${active ? 'border-[rgba(201,168,76,0.3)]' : 'border-[var(--bd)]'}`} />
+                <img src={safeImageUrl(song.thumbnails?.[0]?.url)} className={`w-9 h-9 rounded-[4px] object-cover bg-[var(--s2)] flex-shrink-0 border ${active ? 'border-[rgba(201,168,76,0.3)]' : 'border-[var(--bd)]'}`} />
                 <span className={`text-[12px] font-medium tracking-[0.01em] truncate ${active ? 'text-[var(--gold)]' : 'text-[var(--tp)]'}`}>{song.name}</span>
               </div>
               <span className="text-[10px] text-[var(--ts)] truncate tracking-[0.02em]" style={{ fontFamily: 'var(--fm)' }}>{song.artists?.[0]?.name}</span>

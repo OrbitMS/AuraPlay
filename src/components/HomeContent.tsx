@@ -9,6 +9,7 @@ import { AudioContext, type Track } from '../context/AudioContext';
 import { useHistory } from '../hooks/useHistory';
 import { useLikes } from '../hooks/useLikes';
 import { Heart, Play, Disc3 } from 'lucide-react';
+import { safeImageUrl } from '../lib/safeUrl';
 
 type SongCard = {
   id: string;
@@ -62,7 +63,7 @@ const TrackCard = React.memo(function TrackCard({
       <div className="relative mb-2">
         {song.thumbnails?.[0]?.url ? (
           <img
-            src={song.thumbnails[0].url}
+            src={safeImageUrl(song.thumbnails[0].url)}
             alt={song.name}
             className={`w-full aspect-square object-cover border bg-[var(--s2)] ${
               isAlbum ? 'rounded-[3px]' : 'rounded-[6px]'

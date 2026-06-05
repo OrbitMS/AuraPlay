@@ -4,6 +4,7 @@ import { getYouTubePlaylistTracks } from '../services/youtube';
 import { getSpotifyTracks } from '../services/spotify';
 import { isSpotifyConnected, getMySpotifyPlaylists, getSpotifyPlaylistTracksAuthed, type SpotifyPlaylist } from '../services/spotifyAuth';
 import { createPlaylist } from '../hooks/usePlaylists';
+import { safeImageUrl } from '../lib/safeUrl';
 import type { Track } from '../context/AudioContext';
 import { X, FileText, Play, Music2, Check, AlertTriangle, XCircle, Loader, ListPlus } from 'lucide-react';
 
@@ -220,7 +221,7 @@ export const ImportPlaylistModal: React.FC<Props> = ({ onClose, onCreated }) => 
                               className="flex items-center gap-3 px-2.5 py-2 rounded-[6px] text-left transition-colors hover:bg-white/[0.05]"
                               style={{ background: 'none', border: 'none', cursor: 'pointer' }}>
                               <div className="w-9 h-9 rounded-[5px] overflow-hidden flex-shrink-0 flex items-center justify-center" style={{ background: 'var(--s3)' }}>
-                                {pl.image ? <img src={pl.image} className="w-full h-full object-cover" /> : <Music2 size={14} className="text-[var(--tt)]" />}
+                                {pl.image ? <img src={safeImageUrl(pl.image)} className="w-full h-full object-cover" /> : <Music2 size={14} className="text-[var(--tt)]" />}
                               </div>
                               <div className="min-w-0">
                                 <p className="text-[12px] truncate" style={{ color: 'var(--tp)' }}>{pl.name}</p>

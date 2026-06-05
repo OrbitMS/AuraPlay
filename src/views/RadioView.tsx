@@ -8,6 +8,7 @@ import {
 } from '../services/radio';
 import { AudioContext } from '../context/AudioContext';
 import { Search, Radio, Loader } from 'lucide-react';
+import { safeImageUrl } from '../lib/safeUrl';
 
 const GENRES: { id: string; label: string; tag: string | null }[] = [
   { id: 'top',        label: '⭐ Top',      tag: null },
@@ -65,7 +66,7 @@ function StationCard({
         <div className="w-10 h-10 rounded-[6px] bg-[var(--s3)] flex-shrink-0 flex items-center justify-center overflow-hidden border border-[var(--bd)]">
           {station.favicon && !imgError ? (
             <img
-              src={station.favicon}
+              src={safeImageUrl(station.favicon)}
               alt=""
               className="w-full h-full object-cover"
               onError={() => setImgError(true)}

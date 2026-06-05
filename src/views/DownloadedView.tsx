@@ -2,6 +2,7 @@ import React, { useContext } from 'react';
 import { AudioContext } from '../context/AudioContext';
 import type { Track } from '../context/AudioContext';
 import { Download, Trash2 } from 'lucide-react';
+import { safeImageUrl } from '../lib/safeUrl';
 
 export const DownloadedView: React.FC = () => {
   const ctx = useContext(AudioContext);
@@ -68,7 +69,7 @@ export const DownloadedView: React.FC = () => {
                   </span>
                   <div className="flex items-center gap-2.5 overflow-hidden">
                     {track.thumbnail ? (
-                      <img src={track.thumbnail} className={`w-9 h-9 rounded-[4px] object-cover bg-[var(--s2)] flex-shrink-0 border ${active ? 'border-[rgba(201,168,76,0.3)]' : 'border-[var(--bd)]'}`} />
+                      <img src={safeImageUrl(track.thumbnail)} className={`w-9 h-9 rounded-[4px] object-cover bg-[var(--s2)] flex-shrink-0 border ${active ? 'border-[rgba(201,168,76,0.3)]' : 'border-[var(--bd)]'}`} />
                     ) : (
                       <div className={`w-9 h-9 rounded-[4px] bg-[var(--s2)] flex-shrink-0 border ${active ? 'border-[rgba(201,168,76,0.3)]' : 'border-[var(--bd)]'}`} />
                     )}
