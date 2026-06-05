@@ -328,6 +328,8 @@ export async function searchMusic(query: string) {
 type AudioState = 'playing' | 'paused' | 'ended' | 'buffering' | 'error';
 
 const statusListeners = new Set<(state: AudioState) => void>();
+type ProgressListener = (currentTime: number, duration: number) => void;
+const progressListeners = new Set<ProgressListener>();
 let audioEl: HTMLAudioElement | null = null;
 let currentVolume = 0.7;
 // Increments per playTrack() call so a slow stream resolution that finishes
@@ -366,23 +368,46 @@ function notifyStatus(state: AudioState) {
   statusListeners.forEach((cb) => cb(state));
 }
 
+function notifyProgress() {
+  if (!audioEl) return;
+  const ct = audioEl.currentTime;
+  const dur = isFinite(audioEl.duration) ? audioEl.duration : 0;
+  progressListeners.forEach(cb => cb(ct, dur));
+}
+
 function ensureAudio(): HTMLAudioElement {
   if (audioEl) return audioEl;
   const el = new Audio();
   el.preload = 'auto';
   el.volume = currentVolume;
-  el.addEventListener('playing', () => notifyStatus('playing'));
-  el.addEventListener('pause', () => {
-    if (!el.ended) notifyStatus('paused');
-  });
-  el.addEventListener('ended', () => notifyStatus('ended'));
-  el.addEventListener('waiting', () => notifyStatus('buffering'));
-  el.addEventListener('error', () => {
-    console.error('Audio element error:', el.error);
-    notifyStatus('error');
-  });
+  el.addEventListener('playing',  () => notifyStatus('playing'));
+  el.addEventListener('pause',    () => { if (!el.ended) notifyStatus('paused'); });
+  el.addEventListener('ended',    () => notifyStatus('ended'));
+  el.addEventListener('waiting',  () => notifyStatus('buffering'));
+  el.addEventListener('error',    () => { console.error('Audio element error:', el.error); notifyStatus('error'); });
+  el.addEventListener('timeupdate',     notifyProgress);
+  el.addEventListener('durationchange', notifyProgress);
+  el.addEventListener('seeked',         notifyProgress);
   audioEl = el;
   return el;
+}
+
+/** Subscribe to playback progress. Returns an unsubscribe function. */
+export function subscribeToProgress(cb: ProgressListener): () => void {
+  progressListeners.add(cb);
+  // Fire immediately with current values so the bar is populated on re-mount
+  if (audioEl) {
+    const dur = isFinite(audioEl.duration) ? audioEl.duration : 0;
+    cb(audioEl.currentTime, dur);
+  }
+  return () => progressListeners.delete(cb);
+}
+
+/** Seek to an absolute position in seconds. */
+export function seekTo(seconds: number): void {
+  if (!audioEl) return;
+  const dur = isFinite(audioEl.duration) ? audioEl.duration : 0;
+  audioEl.currentTime = Math.max(0, Math.min(seconds, dur));
 }
 
 export function initAudioPlayer(): void {
