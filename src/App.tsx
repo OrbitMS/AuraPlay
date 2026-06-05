@@ -3,13 +3,14 @@ import { AudioProvider } from './context/AudioContext';
 import { SearchView } from './views/SearchView';
 import { FavoritesView } from './views/FavoritesView';
 import { SettingsView } from './views/SettingsView';
+import { RadioView } from './views/RadioView';
 import { AudioPlayerBar } from './components/AudioPlayerBar';
 import { QueueSidebar } from './components/QueueSidebar';
 import { useSettings } from './hooks/useSettings';
 import { setAudioQuality } from './services/youtube';
 import './App.css';
 
-type View = 'search' | 'favorites' | 'settings';
+type View = 'search' | 'favorites' | 'radio' | 'settings';
 
 function App() {
   const [view, setView] = useState<View>('search');
@@ -52,10 +53,10 @@ function App() {
                 label="Search Music"
               />
               <NavItem
-                active={false}
-                onClick={() => {}}
-                icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="w-[13px] h-[13px] flex-shrink-0"><line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/></svg>}
-                label="Equalizer"
+                active={view === 'radio'}
+                onClick={() => setView('radio')}
+                icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="w-[13px] h-[13px] flex-shrink-0"><path d="M3 18v-6a9 9 0 0 1 18 0v6"/><path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z"/></svg>}
+                label="Radio"
               />
             </div>
 
@@ -87,6 +88,7 @@ function App() {
           <main className="flex-1 h-full overflow-y-auto bg-gradient-to-b from-[var(--s1)] to-[var(--void)]">
             {view === 'search'    && <SearchView />}
             {view === 'favorites' && <FavoritesView />}
+            {view === 'radio'     && <RadioView />}
             {view === 'settings'  && (
               <SettingsView
                 quality={settings.audioQuality}
