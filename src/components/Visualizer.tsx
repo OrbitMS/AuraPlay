@@ -1,5 +1,4 @@
 import React, { useRef, useEffect } from 'react';
-import { getAnalyser } from '../services/youtube';
 
 interface Props {
   active: boolean;          // is audio playing
@@ -10,9 +9,10 @@ interface Props {
 }
 
 /**
- * Frequency-bar visualizer driven by the shared Web Audio AnalyserNode.
- * If real frequency data is unavailable (cross-origin stream without CORS),
- * it falls back to a smooth synthetic animation so it always looks alive.
+ * Synthetic frequency-bar visualizer. Driven by sine waves rather than a real
+ * Web Audio AnalyserNode — routing the <audio> element through createMediaElement-
+ * Source zeroes cross-origin streams (radio + googlevideo) due to CORS, which
+ * would silence playback. The synthetic approach never touches the audio element.
  */
 export const Visualizer: React.FC<Props> = ({
   active, height = 36, barColor = '#c9a84c', className, style,
@@ -28,7 +28,6 @@ export const Visualizer: React.FC<Props> = ({
     if (!ctx) return;
 
     const BARS = 48;
-    let dataArray: Uint8Array | null = null;
 
     const resize = () => {
       const dpr = window.devicePixelRatio || 1;
@@ -46,29 +45,7 @@ export const Visualizer: React.FC<Props> = ({
       const h = canvas.clientHeight;
       ctx.clearRect(0, 0, w, h);
 
-      const analyser = active ? getAnalyser() : null;
-      let values: number[];
-
-      if (analyser) {
-        if (!dataArray || dataArray.length !== analyser.frequencyBinCount) {
-          dataArray = new Uint8Array(analyser.frequencyBinCount);
-        }
-        analyser.getByteFrequencyData(dataArray);
-        const sum = dataArray.reduce((a, b) => a + b, 0);
-        if (sum > 0) {
-          // Real data — sample BARS bins across the lower-mid spectrum
-          values = Array.from({ length: BARS }, (_, i) => {
-            const idx = Math.floor((i / BARS) * (dataArray!.length * 0.7));
-            return dataArray![idx] / 255;
-          });
-        } else {
-          values = synthetic();
-        }
-      } else if (active) {
-        values = synthetic();
-      } else {
-        values = new Array(BARS).fill(0);
-      }
+      const values: number[] = active ? synthetic() : new Array(BARS).fill(0);
 
       const gap = 2;
       const barW = (w - gap * (BARS - 1)) / BARS;
