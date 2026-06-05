@@ -1,16 +1,23 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { AudioProvider } from './context/AudioContext';
 import { SearchView } from './views/SearchView';
 import { FavoritesView } from './views/FavoritesView';
+import { SettingsView } from './views/SettingsView';
 import { AudioPlayerBar } from './components/AudioPlayerBar';
 import { QueueSidebar } from './components/QueueSidebar';
+import { useSettings } from './hooks/useSettings';
+import { setAudioQuality } from './services/youtube';
 import './App.css';
 
-type View = 'search' | 'favorites';
+type View = 'search' | 'favorites' | 'settings';
 
 function App() {
   const [view, setView] = useState<View>('search');
   const [showQueue, setShowQueue] = useState(false);
+  const { settings, update: updateSettings } = useSettings();
+
+  // Apply persisted quality setting on startup
+  useEffect(() => { setAudioQuality(settings.audioQuality); }, [settings.audioQuality]);
 
   return (
     <AudioProvider>
@@ -68,8 +75,8 @@ function App() {
             {/* Bottom */}
             <div className="mt-auto px-2 pt-3 border-t border-[var(--bd)]">
               <NavItem
-                active={false}
-                onClick={() => {}}
+                active={view === 'settings'}
+                onClick={() => setView('settings')}
                 icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="w-[13px] h-[13px] flex-shrink-0"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/></svg>}
                 label="Settings"
               />
@@ -78,7 +85,14 @@ function App() {
 
           {/* Main Content Area */}
           <main className="flex-1 h-full overflow-y-auto bg-gradient-to-b from-[var(--s1)] to-[var(--void)]">
-            {view === 'search' ? <SearchView /> : <FavoritesView />}
+            {view === 'search'    && <SearchView />}
+            {view === 'favorites' && <FavoritesView />}
+            {view === 'settings'  && (
+              <SettingsView
+                quality={settings.audioQuality}
+                onQualityChange={q => updateSettings({ audioQuality: q })}
+              />
+            )}
           </main>
 
           {/* Queue Sidebar (overlay) */}
