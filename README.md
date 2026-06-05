@@ -1,11 +1,20 @@
 # Metrolist Desktop
 
-Metrolist is a lightweight, cross-platform desktop music player that brings your favorite music library to your desktop without the bloat of a web browser.
+The ad-free, high-fidelity YouTube Music experience, now on your desktop.
+
+Finally, bring the power of Metrolist to your workstation. Enjoy the seamless music experience you love on mobile, now native to Windows.
+
+Metrolist Desktop brings the popular open-source Android music client to your computer.
+
+<img width="960" height="487" alt="image" src="https://github.com/user-attachments/assets/cd07e3b0-3f48-4c59-a430-740b69d2e2bd" />
 
 ## Features
-* **Search Integration**: Unified search across music sources using `youtubei.js`.
-* **Native Desktop Controls**: Play, pause, resume, and volume management via system IPC.
-* **Resource Efficient**: Built with Tauri v2 for a small memory footprint and high performance.
+* **Search Integration**: Unified search across music sources
+* **Native Desktop Controls**: Play, pause, resume, and volume management
+* **Resource Efficient**: Built with Tauri v2 for a small memory footprint and high performance
+  
+<img width="489" height="40" alt="image" src="https://github.com/user-attachments/assets/90a7717e-4134-4111-8160-1f588158670d" />
+  
 * **Modern UI**: Styled with Tailwind CSS for a sleek, responsive interface.
 
 ## Prerequisites

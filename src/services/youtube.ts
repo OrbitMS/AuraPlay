@@ -84,25 +84,207 @@ async function generatePoToken(visitorData: string): Promise<string | null> {
 // needed to decipher stream signatures and solve the `n` throttling param, and
 // attaches a po_token so the web client returns streaming data. Search uses a
 // different, lighter client (no player, no po_token).
-async function getStreamClient() {
+// Promise-locked: concurrent callers share one initialization, preventing
+// duplicate po_token generation and double client creation.
+let streamYtInit: Promise<Innertube> | null = null;
+async function getStreamClient(): Promise<Innertube> {
   if (streamYt) return streamYt;
+  if (!streamYtInit) {
+    streamYtInit = (async () => {
+      // A throwaway client gives us the visitor_data that ties the po_token to this session.
+      const seed = await Innertube.create({ fetch: innertubeFetch, retrieve_player: false });
+      const visitorData = seed.session.context.client.visitorData ?? '';
+      const poToken = visitorData ? await generatePoToken(visitorData) : null;
+      console.log(`[stream] po_token: ${poToken ? `generated (${poToken.length} chars)` : 'NULL — BotGuard failed'}`);
+      streamYt = await Innertube.create({
+        fetch: innertubeFetch,
+        cache: new UniversalCache(true),
+        generate_session_locally: true,
+        retrieve_player: true,
+        ...(poToken ? { po_token: poToken, visitor_data: visitorData } : {}),
+      });
+      return streamYt;
+    })();
+  }
+  return streamYtInit;
+}
 
-  // A throwaway client gives us the visitor_data that ties the po_token to this session.
-  // Uses the same spoofed-header fetch as search; without an Origin/User-Agent the
-  // youtubei v1/player and v1/next calls are rejected by YouTube with HTTP 403.
-  const seed = await Innertube.create({ fetch: innertubeFetch, retrieve_player: false });
-  const visitorData = seed.session.context.client.visitorData ?? '';
-  const poToken = visitorData ? await generatePoToken(visitorData) : null;
-  console.log(`[stream] po_token: ${poToken ? `generated (${poToken.length} chars)` : 'NULL — BotGuard failed, web-client streams will be blocked'}`);
+type FeedTrack = {
+  id: string;           // videoId for songs, browseId for albums
+  name: string;
+  artists: { name: string }[];
+  thumbnails: { url: string }[];
+  itemType?: 'song' | 'video' | 'album'; // album cards need different click handling
+};
 
-  streamYt = await Innertube.create({
-    fetch: innertubeFetch,
-    cache: new UniversalCache(true),
-    generate_session_locally: true,
-    retrieve_player: true,
-    ...(poToken ? { po_token: poToken, visitor_data: visitorData } : {}),
-  });
-  return streamYt;
+// Fetches all playable tracks from a YouTube Music album by its browse ID.
+export async function getAlbumTracks(browseId: string): Promise<
+  { id: string; title: string; artist: string; thumbnail: string }[]
+> {
+  const client = await getClient();
+  const album = await client.music.getAlbum(browseId);
+  const results: { id: string; title: string; artist: string; thumbnail: string }[] = [];
+
+  for (const item of (album.contents as any) ?? []) {
+    const id: string = item.id ?? item.video_id ?? '';
+    if (!id) continue;
+
+    const title = typeof item.title === 'string' ? item.title : (item.title?.toString?.() ?? 'Unknown');
+    const artist: string = item.artists?.[0]?.name ?? item.author ?? '';
+
+    // Album tracks share the album thumbnail or have their own
+    const thumbData = item.thumbnail?.contents ?? item.thumbnail?.thumbnails ?? [];
+    const thumbArr: any[] = Array.isArray(thumbData) ? thumbData : [];
+    const thumbnail = thumbArr[thumbArr.length - 1]?.url ?? thumbArr[0]?.url ?? '';
+
+    results.push({ id, title, artist, thumbnail });
+  }
+  return results;
+}
+
+// Returns related tracks for auto-queue via YouTube Music's automix/radio feature.
+export async function getRelatedTracks(videoId: string): Promise<
+  { id: string; title: string; artist: string; thumbnail: string }[]
+> {
+  const client = await getClient();
+  try {
+    const panel = await client.music.getUpNext(videoId, true);
+    const results: { id: string; title: string; artist: string; thumbnail: string }[] = [];
+
+    for (const item of (panel as any).contents ?? []) {
+      if (item.type !== 'PlaylistPanelVideo') continue;
+      const id: string = item.video_id ?? '';
+      if (!id || id === videoId) continue;
+
+      const title = item.title?.toString?.() ?? 'Unknown';
+      const artist: string =
+        item.artists?.[0]?.name ?? (typeof item.author === 'string' ? item.author : '') ?? '';
+      const thumbArr: any[] = Array.isArray(item.thumbnail) ? item.thumbnail : [];
+      const thumbnail: string =
+        thumbArr[thumbArr.length - 1]?.url ?? thumbArr[0]?.url ?? '';
+
+      results.push({ id, title, artist, thumbnail });
+    }
+    return results;
+  } catch (err) {
+    console.warn('[autoqueue] getUpNext failed:', err);
+    return [];
+  }
+}
+
+/** Fetches the YouTube Music Explore page — contains New Releases, Charts, Moods etc. */
+export async function getExploreSections(): Promise<{ title: string; tracks: FeedTrack[] }[]> {
+  const client = await getClient();
+  const explore = await client.music.getExplore();
+  const sections: { title: string; tracks: FeedTrack[] }[] = [];
+
+  for (const shelf of (explore as any).sections ?? []) {
+    const rawTitle = (shelf as any).header?.title;
+    const title: string =
+      typeof rawTitle === 'string' ? rawTitle : rawTitle?.text ?? rawTitle?.runs?.[0]?.text ?? '';
+    const items: any[] = (shelf as any).contents ?? [];
+    const tracks: FeedTrack[] = [];
+    for (const item of items) {
+      const t = normalizeFeedItem(item);
+      if (t) tracks.push(t);
+    }
+    if (tracks.length > 0) sections.push({ title, tracks });
+    if (sections.length >= 3) break;
+  }
+  return sections;
+}
+
+export async function getHomeFeed(): Promise<{ title: string; tracks: FeedTrack[] }[]> {
+  const client = await getClient();
+  const feed = await client.music.getHomeFeed();
+  const sections: { title: string; tracks: FeedTrack[] }[] = [];
+
+  for (const shelf of feed.sections ?? []) {
+    const rawTitle = (shelf as any).header?.title;
+    const title: string =
+      typeof rawTitle === 'string' ? rawTitle : rawTitle?.text ?? rawTitle?.runs?.[0]?.text ?? '';
+    const items: any[] = (shelf as any).contents ?? [];
+    const tracks: FeedTrack[] = [];
+    for (const item of items) {
+      const t = normalizeFeedItem(item);
+      if (t) tracks.push(t);
+    }
+    if (tracks.length > 0) sections.push({ title, tracks });
+    if (sections.length >= 4) break;
+  }
+  return sections;
+}
+
+// Normalises a MusicTwoRowItem from the home feed into a FeedTrack.
+// Songs and videos get their videoId; albums get their browseId and itemType='album'.
+// Playlists and artists are excluded (too broad to show as a card).
+function normalizeFeedItem(item: any): FeedTrack | null {
+  if (!item) return null;
+
+  const type: string = item.item_type ?? '';
+
+  // Handle albums — pass through with browseId so HomeContent can fetch their tracks
+  if (type === 'album') {
+    const browseId: string = item.endpoint?.payload?.browseId ?? item.id ?? '';
+    if (!browseId) return null;
+
+    let name = 'Unknown';
+    if (typeof item.title === 'string') name = item.title;
+    else if (item.title?.text) name = item.title.text;
+    else if (item.title?.runs?.[0]?.text) name = item.title.runs[0].text;
+
+    const artist: string = item.artists?.[0]?.name ?? item.author?.name ?? '';
+    const thumb: any[] = Array.isArray(item.thumbnail) ? item.thumbnail : [];
+    const thumbnailUrl = thumb[thumb.length - 1]?.url ?? thumb[0]?.url ?? item.thumbnails?.[0]?.url ?? '';
+
+    return { id: browseId, name, artists: [{ name: artist }], thumbnails: [{ url: thumbnailUrl }], itemType: 'album' };
+  }
+
+  // Exclude playlists and artists
+  if (type === 'playlist' || type === 'artist') return null;
+
+  // Songs / videos — need a real 11-char videoId
+  const videoId: string =
+    item.endpoint?.payload?.videoId ??
+    item.video_id ??
+    item.videoId ??
+    (typeof item.id === 'string' && /^[a-zA-Z0-9_-]{11}$/.test(item.id) ? item.id : null) ??
+    '';
+  if (!videoId) return null;
+
+  let name = 'Unknown';
+  if (typeof item.title === 'string') name = item.title;
+  else if (item.title?.text) name = item.title.text;
+  else if (item.title?.runs?.[0]?.text) name = item.title.runs[0].text;
+
+  let artist = '';
+  if (item.artists?.[0]?.name) artist = item.artists[0].name;
+  else if (item.author?.name) artist = item.author.name;
+  else if (typeof item.author === 'string') artist = item.author;
+  else if (item.subtitle?.runs) {
+    // subtitle runs for songs: "Song • Artist • Album"  — grab the artist run
+    const runs: any[] = item.subtitle.runs ?? [];
+    const artistRun = runs.find((r: any) =>
+      r.endpoint?.payload?.browseId?.startsWith('UC') || // channel-linked artist
+      (r.text && r.text !== ' • ' && !/^(Song|Video|\d{4})$/.test(r.text.trim()))
+    );
+    artist = artistRun?.text ?? '';
+  }
+
+  // MusicTwoRowItem.thumbnail is Thumbnail[] (parsed class array), not raw JSON
+  const thumb: any[] = Array.isArray(item.thumbnail) ? item.thumbnail : [];
+  // Thumbnail array is sorted large→small; last entry is usually smallest/squarish
+  const thumbnailUrl: string =
+    thumb[thumb.length - 1]?.url ?? thumb[0]?.url ??
+    item.thumbnails?.[0]?.url ?? '';
+
+  return {
+    id: videoId,
+    name,
+    artists: [{ name: artist }],
+    thumbnails: [{ url: thumbnailUrl }],
+    itemType: (type === 'video' ? 'video' : 'song') as 'song' | 'video',
+  };
 }
 
 export async function searchMusic(query: string) {
@@ -168,14 +350,108 @@ export async function searchMusic(query: string) {
 type AudioState = 'playing' | 'paused' | 'ended' | 'buffering' | 'error';
 
 const statusListeners = new Set<(state: AudioState) => void>();
+type ProgressListener = (currentTime: number, duration: number) => void;
+const progressListeners = new Set<ProgressListener>();
 let audioEl: HTMLAudioElement | null = null;
 let currentVolume = 0.7;
 // Increments per playTrack() call so a slow stream resolution that finishes
 // after the user already picked another track does not clobber the new one.
 let playToken = 0;
 
+// ── Visualizer note ───────────────────────────────────────────────────────────
+// We deliberately do NOT use a Web Audio AnalyserNode here. createMediaElementSource
+// reroutes the <audio> element through the Web Audio graph, and for cross-origin
+// media without CORS headers (all radio streams and YouTube googlevideo URLs) the
+// browser ZEROES the output — silencing playback entirely. So the visualizer is
+// driven by a synthetic animation instead (see Visualizer.tsx), which never touches
+// the audio element and therefore never affects playback.
+
+// ── Audio quality preference ──────────────────────────────────────────────────
+// 'high'   → best bitrate (opus ~160 kbps or m4a 128 kbps) — default
+// 'medium' → mid bitrate (opus ~70 kbps or m4a 128 kbps)
+// 'low'    → lowest available (opus ~50 kbps / m4a 48 kbps)
+type AudioQuality = 'high' | 'medium' | 'low';
+let audioQualityPref: AudioQuality = 'high';
+
+export function setAudioQuality(q: AudioQuality): void {
+  if (q === audioQualityPref) return;
+  audioQualityPref = q;
+  // Invalidate cached URLs — they were resolved at the old quality
+  urlCache.clear();
+  try { localStorage.removeItem('metrolist_url_cache'); } catch {}
+}
+
+// Resolved-URL cache: stream URLs are valid for ~6h; we cache for 50min.
+// Persisted to localStorage so recently-played tracks start instantly even
+// after an app restart (no re-resolution round-trip).
+const urlCache = new Map<string, { url: string; expiresAt: number }>();
+const URL_CACHE_TTL_MS = 50 * 60 * 1000;
+const URL_CACHE_KEY = 'metrolist_url_cache';
+const URL_CACHE_MAX = 200; // cap entries to keep localStorage small
+
+// Hydrate from disk on module load, dropping any expired entries.
+(function loadUrlCache() {
+  try {
+    const raw = localStorage.getItem(URL_CACHE_KEY);
+    if (!raw) return;
+    const obj: Record<string, { url: string; expiresAt: number }> = JSON.parse(raw);
+    const now = Date.now();
+    for (const [id, e] of Object.entries(obj)) {
+      if (e.expiresAt > now) urlCache.set(id, e);
+    }
+  } catch {}
+})();
+
+let persistTimer: ReturnType<typeof setTimeout> | null = null;
+function persistUrlCache() {
+  // Debounced — batch rapid writes into one serialization
+  if (persistTimer) return;
+  persistTimer = setTimeout(() => {
+    persistTimer = null;
+    try {
+      // Trim to the newest URL_CACHE_MAX entries by expiry
+      const entries = [...urlCache.entries()].sort((a, b) => b[1].expiresAt - a[1].expiresAt).slice(0, URL_CACHE_MAX);
+      urlCache.clear();
+      for (const [id, e] of entries) urlCache.set(id, e);
+      localStorage.setItem(URL_CACHE_KEY, JSON.stringify(Object.fromEntries(entries)));
+    } catch {}
+  }, 1000);
+}
+
+// Permanent skip list: IDs where every client returned "unavailable".
+// Checked before any resolution attempt so the skip cascade is instant.
+const unplayableIds = new Set<string>();
+export function isUnplayable(videoId: string): boolean {
+  return unplayableIds.has(videoId);
+}
+export function markUnplayable(videoId: string): void {
+  unplayableIds.add(videoId);
+}
+
+function getCachedUrl(videoId: string): string | null {
+  const entry = urlCache.get(videoId);
+  if (!entry) return null;
+  if (Date.now() > entry.expiresAt) { urlCache.delete(videoId); return null; }
+  return entry.url;
+}
+
+function setCachedUrl(videoId: string, url: string) {
+  urlCache.set(videoId, { url, expiresAt: Date.now() + URL_CACHE_TTL_MS });
+  persistUrlCache();
+}
+
+// In-flight map: deduplicates concurrent resolution calls for the same videoId.
+const inFlightUrls = new Map<string, Promise<string>>();
+
 function notifyStatus(state: AudioState) {
   statusListeners.forEach((cb) => cb(state));
+}
+
+function notifyProgress() {
+  if (!audioEl) return;
+  const ct = audioEl.currentTime;
+  const dur = isFinite(audioEl.duration) ? audioEl.duration : 0;
+  progressListeners.forEach(cb => cb(ct, dur));
 }
 
 function ensureAudio(): HTMLAudioElement {
@@ -183,28 +459,103 @@ function ensureAudio(): HTMLAudioElement {
   const el = new Audio();
   el.preload = 'auto';
   el.volume = currentVolume;
-  el.addEventListener('playing', () => notifyStatus('playing'));
-  el.addEventListener('pause', () => {
-    if (!el.ended) notifyStatus('paused');
-  });
-  el.addEventListener('ended', () => notifyStatus('ended'));
-  el.addEventListener('waiting', () => notifyStatus('buffering'));
-  el.addEventListener('error', () => {
-    console.error('Audio element error:', el.error);
-    notifyStatus('error');
-  });
+  el.addEventListener('playing',  () => notifyStatus('playing'));
+  el.addEventListener('pause',    () => { if (!el.ended) notifyStatus('paused'); });
+  el.addEventListener('ended',    () => notifyStatus('ended'));
+  el.addEventListener('waiting',  () => notifyStatus('buffering'));
+  el.addEventListener('error',    () => { console.error('Audio element error:', el.error); notifyStatus('error'); });
+  el.addEventListener('timeupdate',     notifyProgress);
+  el.addEventListener('durationchange', notifyProgress);
+  el.addEventListener('seeked',         notifyProgress);
   audioEl = el;
   return el;
 }
 
+/** Subscribe to playback progress. Returns an unsubscribe function. */
+export function subscribeToProgress(cb: ProgressListener): () => void {
+  progressListeners.add(cb);
+  // Fire immediately with current values so the bar is populated on re-mount
+  if (audioEl) {
+    const dur = isFinite(audioEl.duration) ? audioEl.duration : 0;
+    cb(audioEl.currentTime, dur);
+  }
+  return () => progressListeners.delete(cb);
+}
+
+/** Seek to an absolute position in seconds. */
+export function seekTo(seconds: number): void {
+  if (!audioEl) return;
+  const dur = isFinite(audioEl.duration) ? audioEl.duration : 0;
+  audioEl.currentTime = Math.max(0, Math.min(seconds, dur));
+}
+
 export function initAudioPlayer(): void {
   ensureAudio();
+  // Pre-warm both clients in parallel during idle time so client init doesn't
+  // compete with the app's first paint:
+  //  - stream client (player + po_token) → first PLAY is fast
+  //  - search client → first RECOMMENDATIONS / search is fast
+  const prewarm = () => {
+    getStreamClient().catch(() => {});
+    getClient().catch(() => {});
+  };
+  const ric = (window as any).requestIdleCallback as undefined | ((cb: () => void, opts?: any) => number);
+  if (ric) ric(prewarm, { timeout: 2000 });
+  else setTimeout(prewarm, 200);
 }
 
 // Resolves a playable audio-only stream URL for a video id. Tries the web
 // client first (uses the po_token) and falls back to mobile clients, which
 // sometimes return streaming data when the web client is throttled.
 export async function getAudioStreamUrl(videoId: string): Promise<string> {
+  const cached = getCachedUrl(videoId);
+  if (cached) return cached;
+
+  if (unplayableIds.has(videoId)) throw new Error(`${videoId} is unplayable (cached)`);
+
+  // Share one in-flight resolution across concurrent callers for the same id
+  let promise = inFlightUrls.get(videoId);
+  if (!promise) {
+    promise = resolveStreamUrl(videoId).finally(() => inFlightUrls.delete(videoId));
+    inFlightUrls.set(videoId, promise);
+  }
+  return promise;
+}
+
+// Selects the best audio-only format for the requested quality tier.
+// IMPORTANT: youtubei.js' chooseFormat() defaults to the mp4 container, which
+// silently excludes Opus/WebM — capping "high" at AAC ~128kbps. We pick from
+// adaptive_formats manually so Opus (itag 251, ~160kbps) is selectable.
+function pickAudioFormat(info: any, quality: AudioQuality): any | null {
+  const fmts: any[] = info?.streaming_data?.adaptive_formats ?? [];
+  // Audio-only formats (exclude muxed video+audio, which are lower audio quality)
+  let audio = fmts.filter(f => {
+    const mime = String(f.mime_type ?? '');
+    const isAudio = mime.startsWith('audio/') || (f.has_audio && !f.has_video);
+    return isAudio && (f.url || f.signature_cipher || f.cipher);
+  });
+  if (audio.length === 0) {
+    // Fallback to youtubei's chooser, but force any-container so Opus counts
+    try { return info.chooseFormat({ type: 'audio', quality: 'best', format: 'any' }); }
+    catch { return null; }
+  }
+
+  // Sort by bitrate descending; on near-ties prefer Opus (better quality/bitrate)
+  const br = (f: any) => f.bitrate ?? f.average_bitrate ?? 0;
+  const isOpus = (f: any) => String(f.mime_type ?? '').includes('opus');
+  audio.sort((a, b) => {
+    const d = br(b) - br(a);
+    if (Math.abs(d) > 2000) return d;            // clear bitrate winner
+    return (isOpus(b) ? 1 : 0) - (isOpus(a) ? 1 : 0); // tie → Opus wins
+  });
+
+  if (quality === 'high')   return audio[0];                       // absolute best
+  if (quality === 'low')    return audio[audio.length - 1];        // smallest
+  return audio[Math.floor((audio.length - 1) / 2)] ?? audio[0];    // medium = middle tier
+}
+
+// Runs one full pass over all clients. Returns a URL or null if none worked.
+async function tryResolvePass(videoId: string): Promise<{ url: string | null; lastReason: string }> {
   const client = await getStreamClient();
   // Ordered by how reliably each client returns a directly playable audio URL
   // in 2025. ANDROID_VR / TV / YTMUSIC are not (yet) subject to the web SABR
@@ -218,30 +569,80 @@ export async function getAudioStreamUrl(videoId: string): Promise<string> {
       const info = await client.getInfo(videoId, { client: c });
       const ps = info.playability_status;
       const hasData = !!info.streaming_data;
-      console.log(`[stream] ${c}: playability=${ps?.status ?? '?'} reason="${ps?.reason ?? ''}" streaming_data=${hasData}`);
       if (!hasData) {
         lastReason = `${c}: ${ps?.status ?? 'NO_DATA'} ${ps?.reason ?? ''}`.trim();
         continue;
       }
-      const format = info.chooseFormat({ type: 'audio', quality: 'best' });
-      const f = format as unknown as { itag?: number; url?: string; signature_cipher?: string; cipher?: string };
-      console.log(`[stream] ${c}: itag=${f.itag} hasUrl=${!!f.url} hasSigCipher=${!!f.signature_cipher} hasCipher=${!!f.cipher}`);
+      const format = pickAudioFormat(info, audioQualityPref);
+      if (!format) { lastReason = `${c}: no audio format`; continue; }
       const url = await format.decipher(client.session.player);
       if (url) {
-        console.log(`[stream] ${c}: resolved playable URL`);
-        return url;
+        const f = format as any;
+        console.log(`[stream] ${c}: resolved itag=${f.itag} bitrate=${f.bitrate} codec=${f.mime_type?.match(/codecs="([^"]+)"/)?.[1] ?? '?'} (quality=${audioQualityPref})`);
+        return { url, lastReason };
       }
       lastReason = `${c}: empty URL after decipher`;
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
-      console.warn(`[stream] ${c} failed: ${msg}`);
-      // "No valid URL to decipher" => SABR withheld the URL for this client; the
-      // loop continues to a client that still returns one.
       lastReason = `${c}: ${msg}`;
     }
   }
+  return { url: null, lastReason };
+}
 
+// Decides whether a failure reason looks transient (worth retrying) vs. a hard
+// "this video does not exist / is private / removed" that won't change on retry.
+function isHardFailure(reason: string): boolean {
+  return /unplayable|private|removed|not available in your|members-only|copyright|deleted|does not exist/i.test(reason);
+}
+
+async function resolveStreamUrl(videoId: string): Promise<string> {
+  // Pass 1
+  let { url, lastReason } = await tryResolvePass(videoId);
+  if (url) { setCachedUrl(videoId, url); return url; }
+
+  // Retry once after a short backoff for transient failures (rate limits,
+  // SABR hiccups, momentary network errors). Skip retry for hard failures.
+  if (!isHardFailure(lastReason)) {
+    console.warn(`[stream] pass 1 failed (${lastReason}) — retrying in 600ms`);
+    await new Promise(r => setTimeout(r, 600));
+    const retry = await tryResolvePass(videoId);
+    if (retry.url) { setCachedUrl(videoId, retry.url); return retry.url; }
+    lastReason = retry.lastReason;
+  }
+
+  // Both passes failed — record so future attempts skip it instantly
+  unplayableIds.add(videoId);
   throw new Error(`No playable stream. Last: ${lastReason}`);
+}
+
+// Silently pre-resolves a stream URL into cache so it's ready when the user clicks play.
+// Capped at 2 concurrent prefetches to avoid flooding YouTube and triggering
+// "video unavailable" rate-limit responses that would also block real play requests.
+let activePrefetches = 0;
+export function prefetchStreamUrl(videoId: string): void {
+  if (getCachedUrl(videoId) || inFlightUrls.has(videoId)) return;
+  if (activePrefetches >= 2) return;
+  activePrefetches++;
+  getAudioStreamUrl(videoId)
+    .catch(() => {})
+    .finally(() => { activePrefetches--; });
+}
+
+/** Play any direct audio URL (radio streams, local files) without YouTube resolution. */
+export async function playDirectStream(url: string): Promise<void> {
+  const el = ensureAudio();
+  const token = ++playToken;
+  notifyStatus('buffering');
+  try {
+    el.src = url;
+    el.volume = currentVolume;
+    await el.play();
+  } catch (err) {
+    if (token !== playToken) return;
+    console.error('Failed to play direct stream:', err);
+    notifyStatus('error');
+  }
 }
 
 export async function playTrack(videoId: string): Promise<void> {
@@ -249,7 +650,10 @@ export async function playTrack(videoId: string): Promise<void> {
   const token = ++playToken;
   notifyStatus('buffering');
   try {
-    const url = await getAudioStreamUrl(videoId);
+    // Prefer cached offline file; fall back to live stream
+    const { getOfflineUrl } = await import('./offline');
+    const offlineUrl = await getOfflineUrl(videoId);
+    const url = offlineUrl ?? await getAudioStreamUrl(videoId);
     if (token !== playToken) return; // a newer track was requested meanwhile
     if (!url) {
       notifyStatus('error');

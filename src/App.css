@@ -54,7 +54,9 @@ html, body, #root {
   width: 100%;
   height: 100%;
   overflow: hidden;
-  background: var(--color-obsidian);
+  /* Transparent so the OS acrylic/blur window effect shows through. The app
+     shell paints its own translucent background on top. */
+  background: transparent;
   color: var(--tp);
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
@@ -71,22 +73,51 @@ html, body, #root {
   font-family: var(--font-sans);
 }
 
-/* Scrollbars & Animations */
-::-webkit-scrollbar {
-  width: 3px;
-}
-::-webkit-scrollbar-track {
-  background: transparent;
-}
-::-webkit-scrollbar-thumb {
-  background: var(--color-s4);
-  border-radius: 999px;
-}
+/* Scrollbars */
+::-webkit-scrollbar        { width: 4px; height: 4px; }
+::-webkit-scrollbar-track  { background: transparent; }
+::-webkit-scrollbar-thumb  { background: rgba(255,255,255,0.1); border-radius: 999px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(201,168,76,0.3); }
+
+/* All interactive elements get smooth transitions by default */
+button { transition: color 0.15s, background 0.15s, opacity 0.15s, transform 0.1s; }
+button:focus-visible { outline: 1.5px solid rgba(201,168,76,0.5); outline-offset: 2px; border-radius: 4px; }
 
 @keyframes spin {
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }
 }
-.animate-spin-slow { 
-  animation: spin 4s linear infinite; 
+.animate-spin-slow {
+  animation: spin 4s linear infinite;
+}
+
+.scrollbar-hide::-webkit-scrollbar { display: none; }
+.scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+
+/* Lightweight virtualization: the browser skips rendering/layout for off-screen
+   rows, keeping long search/favorites lists smooth without a JS windowing lib.
+   contain-intrinsic-size reserves space so the scrollbar stays stable. */
+.cv-row  { content-visibility: auto; contain-intrinsic-size: auto 52px; }
+.cv-card { content-visibility: auto; contain-intrinsic-size: auto 170px; }
+
+@keyframes slide-in-right {
+  from { transform: translateX(100%); opacity: 0; }
+  to   { transform: translateX(0);    opacity: 1; }
+}
+.animate-slide-in-right {
+  animation: slide-in-right 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes liveBar {
+  0%   { width: 30%; opacity: 0.6; }
+  50%  { width: 75%; opacity: 1;   }
+  100% { width: 30%; opacity: 0.6; }
+}
+
+@keyframes np-in {
+  from { transform: translateY(100%); opacity: 0.4; }
+  to   { transform: translateY(0);    opacity: 1;   }
+}
+.animate-np-in {
+  animation: np-in 0.32s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }

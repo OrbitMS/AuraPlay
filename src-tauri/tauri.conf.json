@@ -1,8 +1,8 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/schema.json",
-  "productName": "metrolist-desktop",
+  "productName": "AuraPlay",
   "version": "0.1.0",
-  "identifier": "com.metrolist.desktop", 
+  "identifier": "com.orbitms.auraplay",
   "build": {
     "beforeDevCommand": "npm run dev",
     "devUrl": "http://localhost:1420",
@@ -13,18 +13,29 @@
     "windows": [
       {
         "label": "main",
-        "title": "metrolist-desktop",
-        "width": 800,
-        "height": 600
+        "title": "AuraPlay",
+        "width": 1100,
+        "height": 720,
+        "minWidth": 720,
+        "minHeight": 520,
+        "transparent": true,
+        "windowEffects": {
+          "effects": ["acrylic", "blur"]
+        }
       }
     ],
     "security": {
-      "csp": null
+      "csp": null,
+      "assetProtocol": {
+        "enable": true,
+        "scope": ["$APPDATA/**"]
+      }
     }
   },
   "bundle": {
     "active": true,
     "targets": "all",
+    "createUpdaterArtifacts": true,
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",
@@ -32,5 +43,13 @@
       "icons/icon.icns",
       "icons/icon.ico"
     ]
+  },
+  "plugins": {
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEI5QjIzOTY2N0E4QkNDNzIKUldSeXpJdDZaam15dVFIWStZZ1FOZEE1aHRRSEwveC85Vkw5a2VNSDFOY0RFSUllYWljN0xCd2cK",
+      "endpoints": [
+        "https://github.com/OrbitMS/AuraPlay/releases/latest/download/latest.json"
+      ]
+    }
   }
 }

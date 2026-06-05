@@ -1,5 +1,5 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 fn main() {
-    metrolist_desktop_lib::run();
+    auraplay_lib::run();
 }
