@@ -1,16 +1,17 @@
 import React, { useState, useRef } from 'react';
-import { parseSourceList, matchSources, type MatchRow } from '../services/playlistImport';
+import { parseSourceList, matchSources, type MatchRow, type SourceTrack } from '../services/playlistImport';
 import { getYouTubePlaylistTracks } from '../services/youtube';
+import { getSpotifyTracks } from '../services/spotify';
 import { createPlaylist } from '../hooks/usePlaylists';
 import type { Track } from '../context/AudioContext';
-import { X, FileText, Play, Check, AlertTriangle, XCircle, Loader, ListPlus } from 'lucide-react';
+import { X, FileText, Play, Music2, Check, AlertTriangle, XCircle, Loader, ListPlus } from 'lucide-react';
 
 interface Props {
   onClose: () => void;
   onCreated: (id: string) => void;
 }
 
-type Tab = 'paste' | 'youtube';
+type Tab = 'paste' | 'spotify' | 'youtube';
 type Stage = 'input' | 'matching' | 'review';
 
 export const ImportPlaylistModal: React.FC<Props> = ({ onClose, onCreated }) => {
@@ -18,6 +19,7 @@ export const ImportPlaylistModal: React.FC<Props> = ({ onClose, onCreated }) => 
   const [stage, setStage] = useState<Stage>('input');
   const [text, setText] = useState('');
   const [ytUrl, setYtUrl] = useState('');
+  const [spotifyUrl, setSpotifyUrl] = useState('');
   const [name, setName] = useState('');
   const [rows, setRows] = useState<MatchRow[]>([]);
   const [progress, setProgress] = useState({ done: 0, total: 0 });
@@ -32,16 +34,38 @@ export const ImportPlaylistModal: React.FC<Props> = ({ onClose, onCreated }) => 
     reader.readAsText(f);
   };
 
-  const startPasteMatch = async () => {
-    setError('');
-    const sources = parseSourceList(text);
-    if (sources.length === 0) { setError('No tracks found. Paste "Artist - Title" lines or a CSV export.'); return; }
-    if (!name) setName('Imported Playlist');
+  const runMatch = async (sources: SourceTrack[], defaultName: string) => {
+    if (!name) setName(defaultName);
     setStage('matching');
     setProgress({ done: 0, total: sources.length });
     const result = await matchSources(sources, (done, total) => setProgress({ done, total }));
     setRows(result);
     setStage('review');
+  };
+
+  const startPasteMatch = async () => {
+    setError('');
+    const sources = parseSourceList(text);
+    if (sources.length === 0) { setError('No tracks found. Paste "Artist - Title" lines or a CSV export.'); return; }
+    await runMatch(sources, 'Imported Playlist');
+  };
+
+  const startSpotify = async () => {
+    setError('');
+    if (!spotifyUrl.trim()) { setError('Paste a public Spotify playlist or album link.'); return; }
+    setStage('matching');
+    setProgress({ done: 0, total: 0 });
+    try {
+      const { name: plName, tracks } = await getSpotifyTracks(spotifyUrl);
+      if (!name) setName(plName);
+      setProgress({ done: 0, total: tracks.length });
+      const result = await matchSources(tracks, (done, total) => setProgress({ done, total }));
+      setRows(result);
+      setStage('review');
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Could not read that Spotify link.');
+      setStage('input');
+    }
   };
 
   const startYouTube = async () => {
@@ -97,7 +121,7 @@ export const ImportPlaylistModal: React.FC<Props> = ({ onClose, onCreated }) => 
             <>
               {/* Tabs */}
               <div className="flex gap-2 mb-4">
-                {([['paste', 'Paste / CSV', FileText], ['youtube', 'YouTube Link', Play]] as const).map(([id, label, Icon]) => (
+                {([['paste', 'Paste / CSV', FileText], ['spotify', 'Spotify Link', Music2], ['youtube', 'YouTube Link', Play]] as const).map(([id, label, Icon]) => (
                   <button key={id} onClick={() => { setTab(id); setError(''); }}
                     className="flex items-center gap-2 px-3.5 py-2 rounded-[8px] text-[12px] font-semibold transition-colors"
                     style={{
@@ -110,7 +134,7 @@ export const ImportPlaylistModal: React.FC<Props> = ({ onClose, onCreated }) => 
                 ))}
               </div>
 
-              {tab === 'paste' ? (
+              {tab === 'paste' && (
                 <>
                   <p className="text-[11px] mb-2" style={{ color: 'var(--ts)', fontFamily: 'var(--fm)' }}>
                     Paste one track per line as <b>Artist - Title</b>, or a CSV export (e.g. from Exportify for Spotify).
@@ -130,7 +154,29 @@ export const ImportPlaylistModal: React.FC<Props> = ({ onClose, onCreated }) => 
                     </button>
                   </div>
                 </>
-              ) : (
+              )}
+
+              {tab === 'spotify' && (
+                <>
+                  <p className="text-[11px] mb-2" style={{ color: 'var(--ts)', fontFamily: 'var(--fm)' }}>
+                    Paste a <b>public</b> Spotify playlist or album link. Tracks are matched to YouTube Music.
+                  </p>
+                  <input value={spotifyUrl} onChange={e => setSpotifyUrl(e.target.value)}
+                    placeholder="https://open.spotify.com/playlist/…"
+                    className="w-full rounded-[8px] px-3 py-3 text-[12px] outline-none"
+                    style={{ background: 'var(--s1)', border: '1px solid var(--bs)', color: 'var(--tp)' }} />
+                  <p className="text-[10px] mt-2 opacity-70" style={{ color: 'var(--tt)', fontFamily: 'var(--fm)' }}>
+                    Only public playlists; the first ~100 tracks are read. For private or huge playlists, use Paste / CSV.
+                  </p>
+                  <div className="flex justify-end mt-3">
+                    <button onClick={startSpotify} className="px-5 py-2 rounded-[7px] text-[11px] font-bold uppercase tracking-[0.06em]" style={{ background: 'var(--gold)', color: 'var(--obsidian)', border: 'none', cursor: 'pointer' }}>
+                      Import from Spotify
+                    </button>
+                  </div>
+                </>
+              )}
+
+              {tab === 'youtube' && (
                 <>
                   <p className="text-[11px] mb-2" style={{ color: 'var(--ts)', fontFamily: 'var(--fm)' }}>
                     Paste a public <b>YouTube</b> or <b>YouTube Music</b> playlist link.

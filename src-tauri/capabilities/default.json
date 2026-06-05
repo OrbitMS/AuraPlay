@@ -20,6 +20,9 @@
         },
         {
           "url": "https://www.youtube.com/*"
+        },
+        {
+          "url": "https://open.spotify.com/*"
         }
       ]
     }
