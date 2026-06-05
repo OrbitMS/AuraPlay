@@ -8,6 +8,8 @@ interface Props {
   onQueueToggle: () => void;
   queueOpen: boolean;
   onExpand: () => void;
+  height?: number;
+  onResizeStart?: (e: React.PointerEvent) => void;
 }
 
 function fmt(sec: number): string {
@@ -17,7 +19,7 @@ function fmt(sec: number): string {
   return `${m}:${s.toString().padStart(2, '0')}`;
 }
 
-export const AudioPlayerBar: React.FC<Props> = ({ onQueueToggle, queueOpen, onExpand }) => {
+export const AudioPlayerBar: React.FC<Props> = ({ onQueueToggle, queueOpen, onExpand, height = 110, onResizeStart }) => {
   const audioContext = useContext(AudioContext);
   const volumeBarRef   = useRef<HTMLDivElement>(null);
   const progressBarRef = useRef<HTMLDivElement>(null);
@@ -84,7 +86,7 @@ export const AudioPlayerBar: React.FC<Props> = ({ onQueueToggle, queueOpen, onEx
       title={canExpand ? 'Open Now Playing' : undefined}
       className="flex items-center select-none flex-shrink-0 z-10 relative"
       style={{
-        height: '110px',
+        height: `${height}px`,
         paddingLeft: '28px',
         paddingRight: '28px',
         background: 'linear-gradient(180deg, rgba(8,8,11,0.58) 0%, rgba(5,5,7,0.66) 100%)',
@@ -92,6 +94,20 @@ export const AudioPlayerBar: React.FC<Props> = ({ onQueueToggle, queueOpen, onEx
         cursor: canExpand ? 'pointer' : 'default',
       }}
     >
+      {/* Resize handle (top edge) */}
+      {onResizeStart && (
+        <div
+          onPointerDown={(e) => { e.stopPropagation(); onResizeStart(e); }}
+          onClick={(e) => e.stopPropagation()}
+          title="Drag to resize"
+          className="absolute top-0 left-0 right-0 z-30 group"
+          style={{ height: 8, transform: 'translateY(-4px)', cursor: 'row-resize' }}
+        >
+          <div className="absolute left-1/2 -translate-x-1/2 top-[3px] rounded-full transition-colors"
+            style={{ width: 48, height: 3, background: 'rgba(255,255,255,0.12)' }} />
+        </div>
+      )}
+
       {/* Top gradient accent */}
       <div className="absolute top-0 left-[8%] right-[8%] h-px"
         style={{ background: 'linear-gradient(90deg, transparent, rgba(201,168,76,0.3), transparent)' }} />

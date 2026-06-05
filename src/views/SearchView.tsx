@@ -64,33 +64,33 @@ export const SearchView: React.FC = () => {
   };
 
   return (
-    <div className="px-[36px] pt-[32px] pb-[40px] w-full origin-top transition-transform duration-150" style={{ transform: `scale(${zoom})` }}>
-      {/* Page heading + zoom control */}
-      <div className="flex items-start justify-between">
-        <div>
-          <h1 className="text-[28px] text-[var(--tp)] tracking-[-0.01em] leading-[1.1]" style={{ fontFamily: 'var(--fd)' }}>Discover Music</h1>
-          <div className="text-[10px] text-[var(--tt)] mt-1.5 tracking-[0.08em] uppercase" style={{ fontFamily: 'var(--fm)' }}>Search · Stream · Explore</div>
-        </div>
-
-        {/* Sleek zoom control */}
-        <div className="flex items-center gap-0.5 rounded-[8px] p-0.5" style={{ background: 'var(--s1)', border: '1px solid var(--bd)' }}>
-          <button onClick={zoomOut} title="Zoom out" disabled={zoom <= 0.5}
-            className="w-7 h-7 flex items-center justify-center rounded-[6px] transition-colors hover:bg-white/[0.06] disabled:opacity-30"
-            style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--ts)' }}>
-            <Minus size={13} />
-          </button>
-          <button onClick={zoomReset} title="Reset zoom"
-            className="px-1.5 h-7 flex items-center justify-center rounded-[6px] transition-colors hover:bg-white/[0.06] tabular-nums"
-            style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--ts)', fontFamily: 'var(--fm)', fontSize: 10, minWidth: 38 }}>
-            {Math.round(zoom * 100)}%
-          </button>
-          <button onClick={zoomIn} title="Zoom in" disabled={zoom >= 1.5}
-            className="w-7 h-7 flex items-center justify-center rounded-[6px] transition-colors hover:bg-white/[0.06] disabled:opacity-30"
-            style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--ts)' }}>
-            <Plus size={13} />
-          </button>
-        </div>
+    <div className="relative w-full">
+      {/* Sleek zoom control — fixed, never scaled so it can't drift off-screen */}
+      <div className="fixed z-30 flex items-center gap-0.5 rounded-[9px] p-1 shadow-lg"
+        style={{ top: 18, right: 26, background: 'rgba(19,19,24,0.92)', border: '1px solid var(--bs)', backdropFilter: 'blur(8px)' }}>
+        <button onClick={zoomOut} title="Zoom out" disabled={zoom <= 0.5}
+          className="w-8 h-8 flex items-center justify-center rounded-[7px] transition-colors hover:bg-white/[0.08] disabled:opacity-30"
+          style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--ts)' }}>
+          <Minus size={15} />
+        </button>
+        <button onClick={zoomReset} title="Reset zoom"
+          className="h-8 flex items-center justify-center rounded-[7px] transition-colors hover:bg-white/[0.08] tabular-nums"
+          style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--ts)', fontFamily: 'var(--fm)', fontSize: 11, minWidth: 44 }}>
+          {Math.round(zoom * 100)}%
+        </button>
+        <button onClick={zoomIn} title="Zoom in" disabled={zoom >= 1.5}
+          className="w-8 h-8 flex items-center justify-center rounded-[7px] transition-colors hover:bg-white/[0.08] disabled:opacity-30"
+          style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--ts)' }}>
+          <Plus size={15} />
+        </button>
       </div>
+
+      {/* Scaled content (width compensates so it always fits the column) */}
+      <div className="px-[36px] pt-[32px] pb-[40px] transition-transform duration-150"
+        style={{ transform: `scale(${zoom})`, transformOrigin: 'top left', width: `${100 / zoom}%` }}>
+        {/* Page heading */}
+        <h1 className="text-[28px] text-[var(--tp)] tracking-[-0.01em] leading-[1.1]" style={{ fontFamily: 'var(--fd)' }}>Discover Music</h1>
+        <div className="text-[10px] text-[var(--tt)] mt-1.5 tracking-[0.08em] uppercase" style={{ fontFamily: 'var(--fm)' }}>Search · Stream · Explore</div>
 
       {/* Search row — large & prominent, constrained width */}
       <form onSubmit={handleSearch} className="flex gap-3 mt-7 mb-8" style={{ maxWidth: 560 }}>
@@ -213,6 +213,7 @@ export const SearchView: React.FC = () => {
       </div>
       </>
       )}
+      </div>
     </div>
   );
 };
