@@ -378,11 +378,45 @@ export function setAudioQuality(q: AudioQuality): void {
   audioQualityPref = q;
   // Invalidate cached URLs — they were resolved at the old quality
   urlCache.clear();
+  try { localStorage.removeItem('metrolist_url_cache'); } catch {}
 }
 
-// In-memory URL cache: resolved stream URLs are valid for ~6h; cache for 50min.
+// Resolved-URL cache: stream URLs are valid for ~6h; we cache for 50min.
+// Persisted to localStorage so recently-played tracks start instantly even
+// after an app restart (no re-resolution round-trip).
 const urlCache = new Map<string, { url: string; expiresAt: number }>();
 const URL_CACHE_TTL_MS = 50 * 60 * 1000;
+const URL_CACHE_KEY = 'metrolist_url_cache';
+const URL_CACHE_MAX = 200; // cap entries to keep localStorage small
+
+// Hydrate from disk on module load, dropping any expired entries.
+(function loadUrlCache() {
+  try {
+    const raw = localStorage.getItem(URL_CACHE_KEY);
+    if (!raw) return;
+    const obj: Record<string, { url: string; expiresAt: number }> = JSON.parse(raw);
+    const now = Date.now();
+    for (const [id, e] of Object.entries(obj)) {
+      if (e.expiresAt > now) urlCache.set(id, e);
+    }
+  } catch {}
+})();
+
+let persistTimer: ReturnType<typeof setTimeout> | null = null;
+function persistUrlCache() {
+  // Debounced — batch rapid writes into one serialization
+  if (persistTimer) return;
+  persistTimer = setTimeout(() => {
+    persistTimer = null;
+    try {
+      // Trim to the newest URL_CACHE_MAX entries by expiry
+      const entries = [...urlCache.entries()].sort((a, b) => b[1].expiresAt - a[1].expiresAt).slice(0, URL_CACHE_MAX);
+      urlCache.clear();
+      for (const [id, e] of entries) urlCache.set(id, e);
+      localStorage.setItem(URL_CACHE_KEY, JSON.stringify(Object.fromEntries(entries)));
+    } catch {}
+  }, 1000);
+}
 
 // Permanent skip list: IDs where every client returned "unavailable".
 // Checked before any resolution attempt so the skip cascade is instant.
@@ -403,6 +437,7 @@ function getCachedUrl(videoId: string): string | null {
 
 function setCachedUrl(videoId: string, url: string) {
   urlCache.set(videoId, { url, expiresAt: Date.now() + URL_CACHE_TTL_MS });
+  persistUrlCache();
 }
 
 // In-flight map: deduplicates concurrent resolution calls for the same videoId.
@@ -456,8 +491,17 @@ export function seekTo(seconds: number): void {
 
 export function initAudioPlayer(): void {
   ensureAudio();
-  // Pre-warm the stream client in the background so the first play is fast
-  getStreamClient().catch(() => {});
+  // Pre-warm both clients in parallel during idle time so client init doesn't
+  // compete with the app's first paint:
+  //  - stream client (player + po_token) → first PLAY is fast
+  //  - search client → first RECOMMENDATIONS / search is fast
+  const prewarm = () => {
+    getStreamClient().catch(() => {});
+    getClient().catch(() => {});
+  };
+  const ric = (window as any).requestIdleCallback as undefined | ((cb: () => void, opts?: any) => number);
+  if (ric) ric(prewarm, { timeout: 2000 });
+  else setTimeout(prewarm, 200);
 }
 
 // Resolves a playable audio-only stream URL for a video id. Tries the web
@@ -478,7 +522,8 @@ export async function getAudioStreamUrl(videoId: string): Promise<string> {
   return promise;
 }
 
-async function resolveStreamUrl(videoId: string): Promise<string> {
+// Runs one full pass over all clients. Returns a URL or null if none worked.
+async function tryResolvePass(videoId: string): Promise<{ url: string | null; lastReason: string }> {
   const client = await getStreamClient();
   // Ordered by how reliably each client returns a directly playable audio URL
   // in 2025. ANDROID_VR / TV / YTMUSIC are not (yet) subject to the web SABR
@@ -492,7 +537,6 @@ async function resolveStreamUrl(videoId: string): Promise<string> {
       const info = await client.getInfo(videoId, { client: c });
       const ps = info.playability_status;
       const hasData = !!info.streaming_data;
-      console.log(`[stream] ${c}: playability=${ps?.status ?? '?'} reason="${ps?.reason ?? ''}" streaming_data=${hasData}`);
       if (!hasData) {
         lastReason = `${c}: ${ps?.status ?? 'NO_DATA'} ${ps?.reason ?? ''}`.trim();
         continue;
@@ -508,25 +552,42 @@ async function resolveStreamUrl(videoId: string): Promise<string> {
           ? { type: 'audio' as const, quality: 'bestefficiency' as const }
           : { type: 'audio' as const, quality: 'best' as const };
       const format = info.chooseFormat(formatOpts);
-      const f = format as unknown as { itag?: number; url?: string; signature_cipher?: string; cipher?: string; bitrate?: number };
-      console.log(`[stream] ${c}: itag=${f.itag} bitrate=${f.bitrate ?? '?'} quality=${audioQualityPref}`);
       const url = await format.decipher(client.session.player);
       if (url) {
-        console.log(`[stream] ${c}: resolved playable URL`);
-        setCachedUrl(videoId, url);
-        return url;
+        console.log(`[stream] ${c}: resolved (quality=${audioQualityPref})`);
+        return { url, lastReason };
       }
       lastReason = `${c}: empty URL after decipher`;
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
-      console.warn(`[stream] ${c} failed: ${msg}`);
-      // "No valid URL to decipher" => SABR withheld the URL for this client; the
-      // loop continues to a client that still returns one.
       lastReason = `${c}: ${msg}`;
     }
   }
+  return { url: null, lastReason };
+}
 
-  // Every client failed — record this ID so future attempts skip it instantly
+// Decides whether a failure reason looks transient (worth retrying) vs. a hard
+// "this video does not exist / is private / removed" that won't change on retry.
+function isHardFailure(reason: string): boolean {
+  return /unplayable|private|removed|not available in your|members-only|copyright|deleted|does not exist/i.test(reason);
+}
+
+async function resolveStreamUrl(videoId: string): Promise<string> {
+  // Pass 1
+  let { url, lastReason } = await tryResolvePass(videoId);
+  if (url) { setCachedUrl(videoId, url); return url; }
+
+  // Retry once after a short backoff for transient failures (rate limits,
+  // SABR hiccups, momentary network errors). Skip retry for hard failures.
+  if (!isHardFailure(lastReason)) {
+    console.warn(`[stream] pass 1 failed (${lastReason}) — retrying in 600ms`);
+    await new Promise(r => setTimeout(r, 600));
+    const retry = await tryResolvePass(videoId);
+    if (retry.url) { setCachedUrl(videoId, retry.url); return retry.url; }
+    lastReason = retry.lastReason;
+  }
+
+  // Both passes failed — record so future attempts skip it instantly
   unplayableIds.add(videoId);
   throw new Error(`No playable stream. Last: ${lastReason}`);
 }

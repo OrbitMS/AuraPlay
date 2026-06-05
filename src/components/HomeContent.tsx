@@ -18,8 +18,27 @@ type SongCard = {
   itemType?: 'song' | 'video' | 'album';
 };
 
+/* ── Recommendation cache (localStorage, 30-min TTL) ───────────────────────────
+   Recommendations are expensive (multiple InnerTube round-trips). Caching them
+   in localStorage lets the Home page render instantly even after a full quit
+   and cold start — stale-but-instant content shows first, then refreshes quietly
+   in the background. */
+const REC_TTL_MS = 30 * 60 * 1000;
+function recRead<T>(key: string): T | null {
+  try {
+    const raw = localStorage.getItem(`rec_${key}`);
+    if (!raw) return null;
+    const { ts, data } = JSON.parse(raw);
+    if (Date.now() - ts > REC_TTL_MS) return null;
+    return data as T;
+  } catch { return null; }
+}
+function recWrite(key: string, data: unknown) {
+  try { localStorage.setItem(`rec_${key}`, JSON.stringify({ ts: Date.now(), data })); } catch {}
+}
+
 /* ─────────────────────────── TrackCard ──────────────────────────────────── */
-function TrackCard({
+const TrackCard = React.memo(function TrackCard({
   song, onPlay, active, loading: cardLoading,
 }: {
   song: SongCard; onPlay: () => void; active: boolean; loading?: boolean;
@@ -100,7 +119,7 @@ function TrackCard({
       </p>
     </div>
   );
-}
+});
 
 /* ─────────────────────────── Section ────────────────────────────────────── */
 function Section({
@@ -157,11 +176,19 @@ export const HomeContent: React.FC = () => {
   const currentTrackId = audioContext?.currentTrack?.id;
   const { history } = useHistory();
 
-  // Each suggestion bucket fetches independently so partial failures don't kill everything
-  const [trending,   setTrending]   = useState<FeedSection[]>([]);
-  const [explore,    setExplore]    = useState<FeedSection[]>([]);
-  const [forYou,     setForYou]     = useState<SongCard[]>([]);
-  const [loadingMap, setLoadingMap] = useState({ trending: true, explore: true, forYou: true });
+  // Hydrate instantly from the session cache, then refresh in the background
+  const cachedTrending = recRead<FeedSection[]>('trending');
+  const cachedExplore  = recRead<FeedSection[]>('explore');
+  const cachedForYou   = recRead<SongCard[]>('forYou');
+
+  const [trending,   setTrending]   = useState<FeedSection[]>(cachedTrending ?? []);
+  const [explore,    setExplore]    = useState<FeedSection[]>(cachedExplore ?? []);
+  const [forYou,     setForYou]     = useState<SongCard[]>(cachedForYou ?? []);
+  const [loadingMap, setLoadingMap] = useState({
+    trending: !cachedTrending,
+    explore:  !cachedExplore,
+    forYou:   !cachedForYou,
+  });
   const [loadingAlbumId, setLoadingAlbumId] = useState<string | null>(null);
 
   const setDone = (key: keyof typeof loadingMap) =>
@@ -177,18 +204,21 @@ export const HomeContent: React.FC = () => {
         if (cancelled) return;
         if (sections.length > 0) {
           setTrending(sections);
+          recWrite('trending', sections);
         } else {
           // Fallback: use automix from seed
           return getRelatedTracks(SEED_ID).then(tracks => {
             if (cancelled || tracks.length === 0) return;
-            setTrending([{
+            const s = [{
               title: 'Trending Now',
               tracks: tracks.slice(0, 12).map(t => ({
                 id: t.id, name: t.title,
                 artists: [{ name: t.artist }],
                 thumbnails: [{ url: t.thumbnail }],
               })),
-            }]);
+            }];
+            setTrending(s);
+            recWrite('trending', s);
           });
         }
       })
@@ -197,7 +227,7 @@ export const HomeContent: React.FC = () => {
 
     /* ── Explore: New Releases + Charts ── */
     getExploreSections()
-      .then(sections => { if (!cancelled && sections.length > 0) setExplore(sections); })
+      .then(sections => { if (!cancelled && sections.length > 0) { setExplore(sections); recWrite('explore', sections); } })
       .catch(() => {})
       .finally(() => { if (!cancelled) setDone('explore'); });
 
@@ -207,11 +237,13 @@ export const HomeContent: React.FC = () => {
     getRelatedTracks(seedId)
       .then(tracks => {
         if (cancelled || tracks.length === 0) return;
-        setForYou(tracks.slice(0, 12).map(t => ({
+        const cards = tracks.slice(0, 12).map(t => ({
           id: t.id, name: t.title,
           artists: [{ name: t.artist }],
           thumbnails: [{ url: t.thumbnail }],
-        })));
+        }));
+        setForYou(cards);
+        recWrite('forYou', cards);
       })
       .catch(() => {})
       .finally(() => { if (!cancelled) setDone('forYou'); });

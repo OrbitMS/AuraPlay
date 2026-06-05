@@ -92,6 +92,12 @@ button:focus-visible { outline: 1.5px solid rgba(201,168,76,0.5); outline-offset
 .scrollbar-hide::-webkit-scrollbar { display: none; }
 .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
 
+/* Lightweight virtualization: the browser skips rendering/layout for off-screen
+   rows, keeping long search/favorites lists smooth without a JS windowing lib.
+   contain-intrinsic-size reserves space so the scrollbar stays stable. */
+.cv-row  { content-visibility: auto; contain-intrinsic-size: auto 52px; }
+.cv-card { content-visibility: auto; contain-intrinsic-size: auto 170px; }
+
 @keyframes slide-in-right {
   from { transform: translateX(100%); opacity: 0; }
   to   { transform: translateX(0);    opacity: 1; }
