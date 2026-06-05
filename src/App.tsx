@@ -19,13 +19,57 @@ import './App.css';
 
 type View = 'search' | 'favorites' | 'radio' | 'settings' | 'downloaded';
 
+const clamp = (v: number, lo: number, hi: number) => Math.min(Math.max(v, lo), hi);
+const numFromLS = (key: string, def: number) => {
+  const n = Number(localStorage.getItem(key));
+  return Number.isFinite(n) && n > 0 ? n : def;
+};
+
 function App() {
   const [view, setView] = useState<View>('search');
   const [showQueue, setShowQueue] = useState(false);
   const [showNowPlaying, setShowNowPlaying] = useState(false);
   const { settings, update: updateSettings } = useSettings();
 
+  // Resizable panels (persisted)
+  const [sidebarWidth, setSidebarWidth] = useState(() => clamp(numFromLS('auraplay_sidebar_w', 268), 210, 460));
+  const [playerHeight, setPlayerHeight] = useState(() => clamp(numFromLS('auraplay_player_h', 110), 96, 240));
+
   useEffect(() => { setAudioQuality(settings.audioQuality); }, [settings.audioQuality]);
+
+  const startSidebarResize = (e: React.PointerEvent) => {
+    e.preventDefault();
+    const startX = e.clientX, startW = sidebarWidth;
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+    const move = (ev: PointerEvent) => setSidebarWidth(clamp(startW + (ev.clientX - startX), 210, 460));
+    const up = () => {
+      document.removeEventListener('pointermove', move);
+      document.removeEventListener('pointerup', up);
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+      setSidebarWidth(w => { localStorage.setItem('auraplay_sidebar_w', String(w)); return w; });
+    };
+    document.addEventListener('pointermove', move);
+    document.addEventListener('pointerup', up);
+  };
+
+  const startPlayerResize = (e: React.PointerEvent) => {
+    e.preventDefault();
+    const startY = e.clientY, startH = playerHeight;
+    document.body.style.cursor = 'row-resize';
+    document.body.style.userSelect = 'none';
+    const move = (ev: PointerEvent) => setPlayerHeight(clamp(startH - (ev.clientY - startY), 96, 240));
+    const up = () => {
+      document.removeEventListener('pointermove', move);
+      document.removeEventListener('pointerup', up);
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+      setPlayerHeight(h => { localStorage.setItem('auraplay_player_h', String(h)); return h; });
+    };
+    document.addEventListener('pointermove', move);
+    document.addEventListener('pointerup', up);
+  };
 
   return (
     <AudioProvider>
@@ -36,12 +80,23 @@ function App() {
         <div className="flex flex-1 min-h-0 overflow-hidden">
 
           {/* ── Sidebar ─────────────────────────────────────────────────────── */}
-          <aside className="hidden sm:flex w-[268px] flex-shrink-0 flex-col"
+          <aside className="hidden sm:flex flex-shrink-0 flex-col relative"
             style={{
+              width: sidebarWidth,
               background: 'linear-gradient(180deg, rgba(12,12,16,0.55) 0%, rgba(9,9,12,0.6) 100%)',
               borderRight: '1px solid rgba(255,255,255,0.05)',
             }}
           >
+            {/* Resize handle (right edge) */}
+            <div
+              onPointerDown={startSidebarResize}
+              title="Drag to resize"
+              className="absolute top-0 right-0 h-full z-30 group"
+              style={{ width: 8, transform: 'translateX(4px)', cursor: 'col-resize' }}
+            >
+              <div className="absolute right-[3px] top-0 h-full w-[2px] transition-colors group-hover:bg-[rgba(201,168,76,0.5)]" />
+            </div>
+
             {/* Logo */}
             <div className="px-6 pt-8 pb-9 flex items-center gap-3.5">
               <div className="w-12 h-12 rounded-[13px] flex items-center justify-center flex-shrink-0"
@@ -118,6 +173,8 @@ function App() {
           onQueueToggle={() => setShowQueue(v => !v)}
           queueOpen={showQueue}
           onExpand={() => setShowNowPlaying(true)}
+          height={playerHeight}
+          onResizeStart={startPlayerResize}
         />
 
         {/* Full-screen Now Playing */}
