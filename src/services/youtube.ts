@@ -119,19 +119,33 @@ export async function getHomeFeed(): Promise<{ title: string; tracks: FeedTrack[
     const items: any[] = (shelf as any).contents ?? [];
     const tracks: FeedTrack[] = [];
     for (const item of items) {
-      const t = normalizeTrack(item);
-      if (t && t.id) tracks.push(t as FeedTrack);
+      const t = normalizeFeedItem(item);
+      if (t) tracks.push(t);
     }
     if (tracks.length > 0) sections.push({ title, tracks });
-    if (sections.length >= 4) break; // only surface top sections
+    if (sections.length >= 4) break;
   }
   return sections;
 }
 
-function normalizeTrack(item: any) {
+// Normalises a MusicTwoRowItem from the home feed into a FeedTrack.
+// Only accepts songs and videos (item_type = 'song' | 'video') so albums and
+// playlists (which have browse IDs instead of video IDs) are excluded.
+function normalizeFeedItem(item: any): FeedTrack | null {
   if (!item) return null;
-  const id = item.id ?? item.video_id ?? item.videoId ?? '';
-  if (!id) return null;
+
+  // Only playable types — albums/playlists/artists have browse IDs, not video IDs
+  const type: string = item.item_type ?? '';
+  if (type && type !== 'song' && type !== 'video' && type !== 'endpoint') return null;
+
+  // endpoint.payload.videoId is the canonical video ID for MusicTwoRowItem songs
+  const videoId: string =
+    item.endpoint?.payload?.videoId ??
+    item.video_id ??
+    item.videoId ??
+    (typeof item.id === 'string' && /^[a-zA-Z0-9_-]{11}$/.test(item.id) ? item.id : null) ??
+    '';
+  if (!videoId) return null;
 
   let name = 'Unknown';
   if (typeof item.title === 'string') name = item.title;
@@ -139,23 +153,31 @@ function normalizeTrack(item: any) {
   else if (item.title?.runs?.[0]?.text) name = item.title.runs[0].text;
 
   let artist = '';
-  if (typeof item.author === 'string') artist = item.author;
-  else if (item.artists?.[0]?.name) artist = item.artists[0].name;
+  if (item.artists?.[0]?.name) artist = item.artists[0].name;
+  else if (item.author?.name) artist = item.author.name;
+  else if (typeof item.author === 'string') artist = item.author;
   else if (item.subtitle?.runs) {
-    artist = item.subtitle.runs
-      .filter((r: any) => r.text && r.text !== ' • ' && !/^\d{4}$/.test(r.text.trim()))
-      .map((r: any) => r.text)
-      .join('') || '';
+    // subtitle runs for songs: "Song • Artist • Album"  — grab the artist run
+    const runs: any[] = item.subtitle.runs ?? [];
+    const artistRun = runs.find((r: any) =>
+      r.endpoint?.payload?.browseId?.startsWith('UC') || // channel-linked artist
+      (r.text && r.text !== ' • ' && !/^(Song|Video|\d{4})$/.test(r.text.trim()))
+    );
+    artist = artistRun?.text ?? '';
   }
 
-  const thumbnail: string =
-    item.thumbnails?.[0]?.url ?? item.thumbnail?.thumbnails?.[0]?.url ?? '';
+  // MusicTwoRowItem.thumbnail is Thumbnail[] (parsed class array), not raw JSON
+  const thumb: any[] = Array.isArray(item.thumbnail) ? item.thumbnail : [];
+  // Thumbnail array is sorted large→small; last entry is usually smallest/squarish
+  const thumbnailUrl: string =
+    thumb[thumb.length - 1]?.url ?? thumb[0]?.url ??
+    item.thumbnails?.[0]?.url ?? '';
 
   return {
-    id,
+    id: videoId,
     name,
     artists: [{ name: artist }],
-    thumbnails: [{ url: thumbnail }],
+    thumbnails: [{ url: thumbnailUrl }],
   };
 }
 
@@ -228,6 +250,22 @@ let currentVolume = 0.7;
 // after the user already picked another track does not clobber the new one.
 let playToken = 0;
 
+// In-memory URL cache: resolved stream URLs are valid for ~6h; cache for 50min
+// to give ample margin. Keyed by videoId.
+const urlCache = new Map<string, { url: string; expiresAt: number }>();
+const URL_CACHE_TTL_MS = 50 * 60 * 1000;
+
+function getCachedUrl(videoId: string): string | null {
+  const entry = urlCache.get(videoId);
+  if (!entry) return null;
+  if (Date.now() > entry.expiresAt) { urlCache.delete(videoId); return null; }
+  return entry.url;
+}
+
+function setCachedUrl(videoId: string, url: string) {
+  urlCache.set(videoId, { url, expiresAt: Date.now() + URL_CACHE_TTL_MS });
+}
+
 function notifyStatus(state: AudioState) {
   statusListeners.forEach((cb) => cb(state));
 }
@@ -253,12 +291,17 @@ function ensureAudio(): HTMLAudioElement {
 
 export function initAudioPlayer(): void {
   ensureAudio();
+  // Pre-warm the stream client in the background so the first play is fast
+  getStreamClient().catch(() => {});
 }
 
 // Resolves a playable audio-only stream URL for a video id. Tries the web
 // client first (uses the po_token) and falls back to mobile clients, which
 // sometimes return streaming data when the web client is throttled.
 export async function getAudioStreamUrl(videoId: string): Promise<string> {
+  const cached = getCachedUrl(videoId);
+  if (cached) return cached;
+
   const client = await getStreamClient();
   // Ordered by how reliably each client returns a directly playable audio URL
   // in 2025. ANDROID_VR / TV / YTMUSIC are not (yet) subject to the web SABR
@@ -283,6 +326,7 @@ export async function getAudioStreamUrl(videoId: string): Promise<string> {
       const url = await format.decipher(client.session.player);
       if (url) {
         console.log(`[stream] ${c}: resolved playable URL`);
+        setCachedUrl(videoId, url);
         return url;
       }
       lastReason = `${c}: empty URL after decipher`;
@@ -296,6 +340,12 @@ export async function getAudioStreamUrl(videoId: string): Promise<string> {
   }
 
   throw new Error(`No playable stream. Last: ${lastReason}`);
+}
+
+// Silently pre-resolves a stream URL into cache so it's ready when the user clicks play.
+export function prefetchStreamUrl(videoId: string): void {
+  if (getCachedUrl(videoId)) return;
+  getAudioStreamUrl(videoId).catch(() => {});
 }
 
 export async function playTrack(videoId: string): Promise<void> {

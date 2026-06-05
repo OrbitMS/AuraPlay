@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useContext } from 'react';
-import { getHomeFeed } from '../services/youtube';
+import { getHomeFeed, prefetchStreamUrl } from '../services/youtube';
 import { AudioContext, type Track } from '../context/AudioContext';
 import { useHistory } from '../hooks/useHistory';
 import { useLikes } from '../hooks/useLikes';
@@ -33,6 +33,7 @@ function TrackCard({
   return (
     <div
       onClick={onPlay}
+      onMouseEnter={() => prefetchStreamUrl(song.id)}
       className={`group relative flex-shrink-0 w-[120px] cursor-pointer rounded-[8px] p-2.5 transition-colors ${
         active ? 'bg-[var(--gold-g)]' : 'hover:bg-white/[0.04]'
       }`}
