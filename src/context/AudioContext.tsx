@@ -106,9 +106,10 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           break;
         case 'error':
           // Skip unplayable tracks, but give up once we've cycled the whole queue.
+          // Delay prevents rapid-fire cascades that flood YouTube with requests.
           if (queue.length > 0 && skipCountRef.current < queue.length) {
             skipCountRef.current += 1;
-            nextTrack();
+            setTimeout(() => nextTrack(), 400);
           } else {
             console.warn('No playable track found in queue.');
             setIsPlaying(false);
