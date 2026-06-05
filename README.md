@@ -6,6 +6,9 @@ Finally, bring the power of Metrolist to your workstation. Enjoy the seamless mu
 
 Metrolist Desktop brings the popular open-source Android music client to your computer.
 
+<img width="979" height="587" alt="image" src="https://github.com/user-attachments/assets/9f08c732-9203-4926-98af-e7d944cad843" />
+
+
 ## Features
 * **Search Integration**: Unified search across music sources using `youtubei.js`.
 * **Native Desktop Controls**: Play, pause, resume, and volume management via system IPC.
