@@ -536,6 +536,22 @@ export function prefetchStreamUrl(videoId: string): void {
     .finally(() => { activePrefetches--; });
 }
 
+/** Play any direct audio URL (radio streams, local files) without YouTube resolution. */
+export async function playDirectStream(url: string): Promise<void> {
+  const el = ensureAudio();
+  const token = ++playToken;
+  notifyStatus('buffering');
+  try {
+    el.src = url;
+    el.volume = currentVolume;
+    await el.play();
+  } catch (err) {
+    if (token !== playToken) return;
+    console.error('Failed to play direct stream:', err);
+    notifyStatus('error');
+  }
+}
+
 export async function playTrack(videoId: string): Promise<void> {
   const el = ensureAudio();
   const token = ++playToken;

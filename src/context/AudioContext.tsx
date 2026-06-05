@@ -9,7 +9,9 @@ import {
   getAudioStreamUrl,
   getRelatedTracks,
   isUnplayable,
+  playDirectStream,
 } from '../services/youtube';
+import type { RadioStation } from '../services/radio';
 import {
   downloadTrackOffline,
   listDownloaded,
@@ -53,7 +55,11 @@ interface AudioContextType {
   autoQueue: boolean;
   autoQueueStart: number | null;
   toggleAutoQueue: () => void;
+  radioStation: RadioStation | null;
+  playStation: (station: RadioStation) => void;
 }
+
+export type { RadioStation };
 
 export const AudioContext = createContext<AudioContextType | undefined>(undefined);
 
@@ -67,8 +73,8 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [downloadedIds, setDownloadedIds] = useState<Set<string>>(new Set());
   const [downloadingIds, setDownloadingIds] = useState<Set<string>>(new Set());
   const [autoQueue, setAutoQueue] = useState(true);
-  // Index in `queue` where auto-suggested tracks begin (null = none appended yet)
   const [autoQueueStart, setAutoQueueStart] = useState<number | null>(null);
+  const [radioStation, setRadioStation] = useState<RadioStation | null>(null);
   const { push: pushHistory } = useHistory();
 
   const currentTrack = currentIndex >= 0 && currentIndex < queue.length ? queue[currentIndex] : null;
@@ -178,9 +184,18 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   const toggleAutoQueue = () => setAutoQueue(v => !v);
 
+  const playStation = (station: RadioStation) => {
+    skipCountRef.current = 0;
+    setRadioStation(station);
+    setQueue([]);
+    setCurrentIndex(-1);
+    setIsPlaying(true);
+    playDirectStream(station.url_resolved).catch(err => console.error('Radio play failed:', err));
+  };
+
   const playTrack = (track: Track, completePlaylist?: Track[]) => {
     skipCountRef.current = 0;
-    // A manual play always resets the auto-queue bookmark
+    setRadioStation(null);          // leaving radio mode
     setAutoQueueStart(null);
     isFetchingAutoRef.current = false;
     if (completePlaylist && completePlaylist.length > 0) {
@@ -332,6 +347,8 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       autoQueue,
       autoQueueStart,
       toggleAutoQueue,
+      radioStation,
+      playStation,
     }}>
       {children}
     </AudioContext.Provider>

@@ -46,19 +46,22 @@ export const AudioPlayerBar: React.FC<Props> = ({ onQueueToggle, queueOpen }) =>
 
   if (!audioContext) return null;
 
-  const { 
-    currentTrack, 
-    isPlaying, 
-    togglePlay, 
-    nextTrack, 
-    prevTrack, 
-    isShuffling, 
-    repeatMode, 
-    setShuffling, 
+  const {
+    currentTrack,
+    isPlaying,
+    togglePlay,
+    nextTrack,
+    prevTrack,
+    isShuffling,
+    repeatMode,
+    setShuffling,
     cycleRepeat,
     volume,
-    setVolume
+    setVolume,
+    radioStation,
   } = audioContext;
+
+  const isLive = radioStation !== null || !isFinite(duration) || (duration === 0 && isPlaying);
 
   const setVolumeFromClientX = (clientX: number) => {
     const bar = volumeBarRef.current;
@@ -115,26 +118,44 @@ export const AudioPlayerBar: React.FC<Props> = ({ onQueueToggle, queueOpen }) =>
 
       {/* Left Section: Now Playing */}
       <div className="w-[26%] flex items-center gap-3 min-w-0">
-        {currentTrack ? (
+        {radioStation ? (
+          /* Radio station display */
           <>
-            <div className="w-[46px] h-[46px] rounded-full flex-shrink-0 relative overflow-hidden border-2 border-[rgba(201,168,76,0.25)]">
-              <img
-                src={currentTrack.thumbnail || ''}
-                alt=""
-                className={`w-full h-full object-cover rounded-full ${isPlaying ? 'animate-spin-slow' : ''}`}
-              />
-              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[9px] h-[9px] rounded-full bg-[var(--obsidian)] border border-[rgba(201,168,76,0.3)]"></div>
+            <div className="w-[46px] h-[46px] rounded-[8px] flex-shrink-0 overflow-hidden border border-[rgba(201,168,76,0.25)] bg-[var(--s2)] flex items-center justify-center">
+              {radioStation.favicon ? (
+                <img src={radioStation.favicon} alt="" className="w-full h-full object-cover" onError={e => { (e.target as HTMLImageElement).style.display='none'; }} />
+              ) : (
+                <svg viewBox="0 0 24 24" fill="none" stroke="var(--tt)" strokeWidth="1.5" className="w-5 h-5"><path d="M3 18v-6a9 9 0 0 1 18 0v6"/><path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z"/></svg>
+              )}
             </div>
             <div className="flex flex-col min-w-0">
               <span className="text-[12px] font-semibold tracking-[0.01em] truncate text-[var(--tp)]">
-                {currentTrack.title}
+                {radioStation.name}
               </span>
+              <div className="flex items-center gap-1.5 mt-0.5">
+                {isPlaying && <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse flex-shrink-0" />}
+                <span className="text-[9px] tracking-[0.07em] uppercase truncate text-[var(--gold)]" style={{ fontFamily: 'var(--fm)' }}>
+                  {isPlaying ? 'Live' : 'Radio'} · {radioStation.bitrate > 0 ? `${radioStation.bitrate}kbps` : radioStation.codec}
+                </span>
+              </div>
+            </div>
+          </>
+        ) : currentTrack ? (
+          /* Regular track display */
+          <>
+            <div className="w-[46px] h-[46px] rounded-full flex-shrink-0 relative overflow-hidden border-2 border-[rgba(201,168,76,0.25)]">
+              <img src={currentTrack.thumbnail || ''} alt="" className={`w-full h-full object-cover rounded-full ${isPlaying ? 'animate-spin-slow' : ''}`} />
+              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[9px] h-[9px] rounded-full bg-[var(--obsidian)] border border-[rgba(201,168,76,0.3)]"></div>
+            </div>
+            <div className="flex flex-col min-w-0">
+              <span className="text-[12px] font-semibold tracking-[0.01em] truncate text-[var(--tp)]">{currentTrack.title}</span>
               <span className="text-[9px] tracking-[0.07em] uppercase truncate text-[var(--gold)] mt-0.5" style={{ fontFamily: 'var(--fm)' }}>
                 {currentTrack.artist || 'Unknown Artist'}
               </span>
             </div>
           </>
         ) : (
+          /* Empty state */
           <>
             <div className="w-[46px] h-[46px] rounded-full border-2 border-dashed border-[var(--bd)] flex-shrink-0 bg-[var(--s1)] flex items-center justify-center">
               <svg viewBox="0 0 24 24" fill="none" stroke="var(--tt)" strokeWidth="1.2" className="w-4 h-4">
@@ -142,9 +163,7 @@ export const AudioPlayerBar: React.FC<Props> = ({ onQueueToggle, queueOpen }) =>
               </svg>
             </div>
             <div className="flex flex-col">
-              <span className="text-[11px] font-medium tracking-[0.01em] text-[var(--tt)]">
-                No Track Selected
-              </span>
+              <span className="text-[11px] font-medium tracking-[0.01em] text-[var(--tt)]">No Track Selected</span>
             </div>
           </>
         )}
@@ -215,36 +234,48 @@ export const AudioPlayerBar: React.FC<Props> = ({ onQueueToggle, queueOpen }) =>
           </button>
         </div>
 
-        {/* Seekable progress bar */}
+        {/* Progress / LIVE row */}
         <div className="w-full max-w-[420px] flex items-center gap-2">
-          <span className="text-[9px] text-[var(--tt)] select-none w-7 text-right tabular-nums" style={{ fontFamily: 'var(--fm)' }}>
-            {fmt(currentTime)}
-          </span>
-
-          {/* Track */}
-          <div
-            ref={progressBarRef}
-            onPointerDown={handleProgressPointerDown}
-            onPointerMove={handleProgressPointerMove}
-            onPointerUp={handleProgressPointerUp}
-            className="flex-1 h-1 bg-[var(--s4)] rounded-full relative cursor-pointer group touch-none"
-            style={{ touchAction: 'none' }}
-          >
-            {/* Filled portion */}
-            <div
-              className="h-full bg-[var(--gold)] rounded-full absolute left-0 top-0 group-hover:bg-[var(--gold-b)] transition-colors pointer-events-none"
-              style={{ width: `${duration > 0 ? (currentTime / duration) * 100 : 0}%` }}
-            />
-            {/* Thumb — visible on hover or while dragging */}
-            <div
-              className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-3 h-3 rounded-full bg-[var(--tp)] shadow opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"
-              style={{ left: `${duration > 0 ? (currentTime / duration) * 100 : 0}%` }}
-            />
-          </div>
-
-          <span className="text-[9px] text-[var(--tt)] select-none w-7 text-left tabular-nums" style={{ fontFamily: 'var(--fm)' }}>
-            {fmt(duration)}
-          </span>
+          {isLive ? (
+            /* Live stream — no seek, just a pulsing bar */
+            <>
+              <div className="flex items-center gap-1.5 flex-shrink-0">
+                <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
+                <span className="text-[9px] font-bold tracking-[0.08em] text-red-400 uppercase select-none" style={{ fontFamily: 'var(--fm)' }}>Live</span>
+              </div>
+              <div className="flex-1 h-1 bg-[var(--s4)] rounded-full overflow-hidden">
+                <div className={`h-full bg-[var(--gold)] rounded-full ${isPlaying ? 'animate-[liveBar_2s_ease-in-out_infinite]' : 'w-full'}`} style={{ width: isPlaying ? undefined : '100%' }} />
+              </div>
+              <span className="text-[9px] text-[var(--tt)] select-none w-7 tabular-nums" style={{ fontFamily: 'var(--fm)' }}>∞</span>
+            </>
+          ) : (
+            /* Seekable track bar */
+            <>
+              <span className="text-[9px] text-[var(--tt)] select-none w-7 text-right tabular-nums" style={{ fontFamily: 'var(--fm)' }}>
+                {fmt(currentTime)}
+              </span>
+              <div
+                ref={progressBarRef}
+                onPointerDown={handleProgressPointerDown}
+                onPointerMove={handleProgressPointerMove}
+                onPointerUp={handleProgressPointerUp}
+                className="flex-1 h-1 bg-[var(--s4)] rounded-full relative cursor-pointer group touch-none"
+                style={{ touchAction: 'none' }}
+              >
+                <div
+                  className="h-full bg-[var(--gold)] rounded-full absolute left-0 top-0 group-hover:bg-[var(--gold-b)] transition-colors pointer-events-none"
+                  style={{ width: `${duration > 0 ? (currentTime / duration) * 100 : 0}%` }}
+                />
+                <div
+                  className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-3 h-3 rounded-full bg-[var(--tp)] shadow opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"
+                  style={{ left: `${duration > 0 ? (currentTime / duration) * 100 : 0}%` }}
+                />
+              </div>
+              <span className="text-[9px] text-[var(--tt)] select-none w-7 text-left tabular-nums" style={{ fontFamily: 'var(--fm)' }}>
+                {fmt(duration)}
+              </span>
+            </>
+          )}
         </div>
       </div>
 
