@@ -39,6 +39,7 @@ A sleek, glassy interface that puts your music front and center — resize it to
 🔄 Always up to date
 Updates itself automatically — you'll always have the latest version.
 
+
 <img width="960" height="487" alt="image" src="https://github.com/user-attachments/assets/cd07e3b0-3f48-4c59-a430-740b69d2e2bd" />
 
 ## Tech Stack
