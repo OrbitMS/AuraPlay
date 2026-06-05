@@ -2,18 +2,21 @@
 
 The ad-free, high-fidelity YouTube Music experience, now on your desktop.
 
-Finally, bring the power of Metrolist to your workstation. Enjoy the seamless music experience you love on mobile, now native to Windows.
+Finally, bring the power of Music to your workstation. Enjoy the seamless music experience you love now native to Windows.
 
 AuraPlay Desktop brings the popular open-source Android music client to your computer.
 
 <img width="960" height="487" alt="image" src="https://github.com/user-attachments/assets/cd07e3b0-3f48-4c59-a430-740b69d2e2bd" />
 
-## Features
-* **Search Integration**: Unified search across music sources
-* **Native Desktop Controls**: Play, pause, resume, and volume management
-* **Resource Efficient**: Built with Tauri v2 for a small memory footprint and high performance
-    
-* **Modern UI**: Styled with Tailwind CSS for a sleek, responsive interface.
+# Key Features
+
+Unified Search: A single search bar for all your music platforms.
+
+Native Controls: Full control over playback and volume with seamless OS integration.
+
+Tauri-Powered: Unmatched performance and speed with ultra-low resource usage.
+
+Modern UI: A responsive, clean interface that puts your music at the center.
 
 ## Prerequisites
 * [Node.js](https://nodejs.org/) (v18+)
