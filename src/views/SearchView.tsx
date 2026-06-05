@@ -2,9 +2,11 @@ import React, { useState, useContext } from 'react';
 import { searchMusic } from '../services/youtube';
 import { AudioContext, Track } from '../context/AudioContext';
 import { useLikes } from '../hooks/useLikes';
+import { useHistory } from '../hooks/useHistory';
 import { HomeContent } from '../components/HomeContent';
 import { AddToPlaylistButton } from '../components/AddToPlaylistButton';
 import { safeImageUrl } from '../lib/safeUrl';
+import { rankSearchResults } from '../lib/rankResults';
 import { Search, Download, CheckCircle, Loader, Heart, Minus, Plus } from 'lucide-react';
 
 export const SearchView: React.FC = () => {
@@ -17,7 +19,8 @@ export const SearchView: React.FC = () => {
   const currentTrackId = audioContext?.currentTrack?.id;
   const downloadedIds = audioContext?.downloadedIds ?? new Set<string>();
   const downloadingIds = audioContext?.downloadingIds ?? new Set<string>();
-  const { toggle: toggleLike, isLiked } = useLikes();
+  const { toggle: toggleLike, isLiked, likedIds } = useLikes();
+  const { history } = useHistory();
 
   const zoomIn  = () => setZoom((p) => Math.min(p + 0.1, 1.5));
   const zoomOut = () => setZoom((p) => Math.max(p - 0.1, 0.5));
@@ -29,7 +32,8 @@ export const SearchView: React.FC = () => {
     setHasSearched(true);
     try {
       const songs = await searchMusic(searchStr);
-      setResults(songs);
+      const ranked = rankSearchResults(songs, searchStr, likedIds, history.map(t => t.id));
+      setResults(ranked);
     } catch (error) {
       console.error("Search failure:", error);
     } finally {
