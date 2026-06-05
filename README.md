@@ -2,12 +2,6 @@
 
 The ad-free, high-fidelity YouTube Music experience, now on your desktop.
 
-Finally, bring the power of Music to your workstation. Enjoy the seamless music experience you love now native to Windows.
-
-AuraPlay Desktop brings the popular open-source Android music client to your computer.
-
-<img width="960" height="487" alt="image" src="https://github.com/user-attachments/assets/cd07e3b0-3f48-4c59-a430-740b69d2e2bd" />
-
 🎧 AuraPlay — Highlights
 🔍 Search any song, instantly
 Find millions of tracks, albums, and artists in one search bar.
@@ -45,12 +39,10 @@ A sleek, glassy interface that puts your music front and center — resize it to
 🔄 Always up to date
 Updates itself automatically — you'll always have the latest version.
 
-
+<img width="960" height="487" alt="image" src="https://github.com/user-attachments/assets/cd07e3b0-3f48-4c59-a430-740b69d2e2bd" />
 
 ## Tech Stack
 - **Frontend**: React 19, Tailwind CSS
 - **Desktop Layer**: Tauri v2
 - **API Service**: youtubei.js
 
-## License
-MIT
