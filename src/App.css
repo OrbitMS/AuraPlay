@@ -71,17 +71,15 @@ html, body, #root {
   font-family: var(--font-sans);
 }
 
-/* Scrollbars & Animations */
-::-webkit-scrollbar {
-  width: 3px;
-}
-::-webkit-scrollbar-track {
-  background: transparent;
-}
-::-webkit-scrollbar-thumb {
-  background: var(--color-s4);
-  border-radius: 999px;
-}
+/* Scrollbars */
+::-webkit-scrollbar        { width: 4px; height: 4px; }
+::-webkit-scrollbar-track  { background: transparent; }
+::-webkit-scrollbar-thumb  { background: rgba(255,255,255,0.1); border-radius: 999px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(201,168,76,0.3); }
+
+/* All interactive elements get smooth transitions by default */
+button { transition: color 0.15s, background 0.15s, opacity 0.15s, transform 0.1s; }
+button:focus-visible { outline: 1.5px solid rgba(201,168,76,0.5); outline-offset: 2px; border-radius: 4px; }
 
 @keyframes spin {
   from { transform: rotate(0deg); }
