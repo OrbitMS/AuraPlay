@@ -10,6 +10,7 @@ const SettingsView  = lazy(() => import('./views/SettingsView').then(m => ({ def
 const RadioView     = lazy(() => import('./views/RadioView').then(m => ({ default: m.RadioView })));
 import { QueueSidebar } from './components/QueueSidebar';
 import { NowPlayingScreen } from './components/NowPlayingScreen';
+import { ErrorBoundary } from './components/ErrorBoundary';
 import { useSettings } from './hooks/useSettings';
 import { setAudioQuality } from './services/youtube';
 import './App.css';
@@ -86,17 +87,19 @@ function App() {
           {/* ── Main Content ─────────────────────────────────────────────────── */}
           <main className="flex-1 h-full overflow-y-auto relative"
             style={{ background: 'linear-gradient(180deg, #131318 0%, #0f0f12 100%)' }}>
-            {view === 'search' && <SearchView />}
-            <Suspense fallback={<ViewLoader />}>
-              {view === 'favorites' && <FavoritesView />}
-              {view === 'radio'     && <RadioView />}
-              {view === 'settings'  && (
-                <SettingsView
-                  quality={settings.audioQuality}
-                  onQualityChange={q => updateSettings({ audioQuality: q })}
-                />
-              )}
-            </Suspense>
+            <ErrorBoundary label={view} resetKey={view}>
+              {view === 'search' && <SearchView />}
+              <Suspense fallback={<ViewLoader />}>
+                {view === 'favorites' && <FavoritesView />}
+                {view === 'radio'     && <RadioView />}
+                {view === 'settings'  && (
+                  <SettingsView
+                    quality={settings.audioQuality}
+                    onQualityChange={q => updateSettings({ audioQuality: q })}
+                  />
+                )}
+              </Suspense>
+            </ErrorBoundary>
           </main>
 
           {/* Queue Sidebar overlay */}

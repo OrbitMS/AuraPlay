@@ -39,26 +39,27 @@ export const Visualizer: React.FC<Props> = ({
     const ro = new ResizeObserver(resize);
     ro.observe(canvas);
 
-    const draw = () => {
-      rafRef.current = requestAnimationFrame(draw);
+    const renderBars = (values: number[]) => {
       const w = canvas.clientWidth;
       const h = canvas.clientHeight;
       ctx.clearRect(0, 0, w, h);
-
-      const values: number[] = active ? synthetic() : new Array(BARS).fill(0);
-
       const gap = 2;
       const barW = (w - gap * (BARS - 1)) / BARS;
       for (let i = 0; i < BARS; i++) {
         const v = values[i];
         const barH = Math.max(2, v * h);
         const x = i * (barW + gap);
-        const y = (h - barH) / 2; // centered (mirror) look
+        const y = (h - barH) / 2;
         const alpha = 0.35 + v * 0.65;
         ctx.fillStyle = hexWithAlpha(barColor, alpha);
         roundRect(ctx, x, y, barW, barH, Math.min(barW / 2, 2));
         ctx.fill();
       }
+    };
+
+    const draw = () => {
+      rafRef.current = requestAnimationFrame(draw);
+      renderBars(synthetic());
     };
 
     function synthetic(): number[] {
@@ -71,8 +72,31 @@ export const Visualizer: React.FC<Props> = ({
       });
     }
 
-    draw();
-    return () => { cancelAnimationFrame(rafRef.current); ro.disconnect(); };
+    const stop = () => {
+      if (rafRef.current) { cancelAnimationFrame(rafRef.current); rafRef.current = 0; }
+    };
+
+    // Only run the animation loop while playing AND the window is visible.
+    // Otherwise stop the rAF entirely (zero idle/background CPU) and leave a
+    // static flat frame.
+    const sync = () => {
+      const shouldRun = active && !document.hidden;
+      if (shouldRun && !rafRef.current) {
+        draw();
+      } else if (!shouldRun) {
+        stop();
+        renderBars(new Array(BARS).fill(0)); // static flat bars
+      }
+    };
+
+    document.addEventListener('visibilitychange', sync);
+    sync();
+
+    return () => {
+      stop();
+      ro.disconnect();
+      document.removeEventListener('visibilitychange', sync);
+    };
   }, [active, barColor]);
 
   return (

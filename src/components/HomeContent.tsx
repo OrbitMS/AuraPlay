@@ -18,14 +18,15 @@ type SongCard = {
   itemType?: 'song' | 'video' | 'album';
 };
 
-/* ── Recommendation cache (sessionStorage, 30-min TTL) ─────────────────────────
+/* ── Recommendation cache (localStorage, 30-min TTL) ───────────────────────────
    Recommendations are expensive (multiple InnerTube round-trips). Caching them
-   lets the Home page render instantly on revisit/restart, then refresh quietly
+   in localStorage lets the Home page render instantly even after a full quit
+   and cold start — stale-but-instant content shows first, then refreshes quietly
    in the background. */
 const REC_TTL_MS = 30 * 60 * 1000;
 function recRead<T>(key: string): T | null {
   try {
-    const raw = sessionStorage.getItem(`rec_${key}`);
+    const raw = localStorage.getItem(`rec_${key}`);
     if (!raw) return null;
     const { ts, data } = JSON.parse(raw);
     if (Date.now() - ts > REC_TTL_MS) return null;
@@ -33,7 +34,7 @@ function recRead<T>(key: string): T | null {
   } catch { return null; }
 }
 function recWrite(key: string, data: unknown) {
-  try { sessionStorage.setItem(`rec_${key}`, JSON.stringify({ ts: Date.now(), data })); } catch {}
+  try { localStorage.setItem(`rec_${key}`, JSON.stringify({ ts: Date.now(), data })); } catch {}
 }
 
 /* ─────────────────────────── TrackCard ──────────────────────────────────── */
