@@ -1,12 +1,18 @@
-import React, { createContext, useState, useEffect, useRef } from 'react';
-import { 
-  playTrack as nativePlayTrack, 
-  pauseTrack as nativePauseTrack, 
+import React, { createContext, useState, useEffect, useRef, useCallback } from 'react';
+import {
+  playTrack as nativePlayTrack,
+  pauseTrack as nativePauseTrack,
   resumeTrack as nativeResumeTrack,
   setVolume as nativeSetVolume,
   subscribeToAudioStatus,
-  initAudioPlayer
+  initAudioPlayer,
+  getAudioStreamUrl,
 } from '../services/youtube';
+import {
+  downloadTrackOffline,
+  listDownloaded,
+  deleteDownload,
+} from '../services/offline';
 import { getNextIndex, cycleRepeatMode, type RepeatMode } from '../lib/queue';
 
 export interface Track {
@@ -26,6 +32,8 @@ interface AudioContextType {
   repeatMode: RepeatMode;
   isShuffling: boolean;
   volume: number;
+  downloadedIds: Set<string>;
+  downloadingIds: Set<string>;
   cycleRepeat: () => void;
   setShuffling: (val: boolean) => void;
   playTrack: (track: Track, completePlaylist?: Track[]) => void;
@@ -34,6 +42,8 @@ interface AudioContextType {
   prevTrack: () => void;
   stopTrack: () => void;
   setVolume: (volume: number) => void;
+  downloadTrack: (track: Track) => Promise<void>;
+  removeDownload: (id: string) => Promise<void>;
 }
 
 export const AudioContext = createContext<AudioContextType | undefined>(undefined);
@@ -45,6 +55,8 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [repeatMode, setRepeatMode] = useState<RepeatMode>('off');
   const [isShuffling, setIsShuffling] = useState(false);
   const [volume, setVolumeState] = useState<number>(70); // Initialize standard fallback volume at 70%
+  const [downloadedIds, setDownloadedIds] = useState<Set<string>>(new Set());
+  const [downloadingIds, setDownloadingIds] = useState<Set<string>>(new Set());
 
   const currentTrack = currentIndex >= 0 && currentIndex < queue.length ? queue[currentIndex] : null;
 
@@ -54,6 +66,28 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   useEffect(() => {
     initAudioPlayer();
+    listDownloaded().then((tracks) => {
+      setDownloadedIds(new Set(tracks.map((t) => t.id)));
+    });
+  }, []);
+
+  const downloadTrack = useCallback(async (track: Track) => {
+    if (downloadingIds.has(track.id) || downloadedIds.has(track.id)) return;
+    setDownloadingIds((prev) => new Set(prev).add(track.id));
+    try {
+      const url = await getAudioStreamUrl(track.id);
+      await downloadTrackOffline(track.id, url, track.title, track.artist, track.thumbnail);
+      setDownloadedIds((prev) => new Set(prev).add(track.id));
+    } catch (err) {
+      console.error('Download failed:', err);
+    } finally {
+      setDownloadingIds((prev) => { const s = new Set(prev); s.delete(track.id); return s; });
+    }
+  }, [downloadingIds, downloadedIds]);
+
+  const removeDownload = useCallback(async (id: string) => {
+    await deleteDownload(id);
+    setDownloadedIds((prev) => { const s = new Set(prev); s.delete(id); return s; });
   }, []);
 
   useEffect(() => {
@@ -179,6 +213,8 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       repeatMode,
       isShuffling,
       volume,
+      downloadedIds,
+      downloadingIds,
       cycleRepeat,
       setShuffling: setIsShuffling,
       playTrack,
@@ -186,7 +222,9 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       nextTrack,
       prevTrack,
       stopTrack,
-      setVolume
+      setVolume,
+      downloadTrack,
+      removeDownload,
     }}>
       {children}
     </AudioContext.Provider>

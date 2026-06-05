@@ -1,7 +1,7 @@
 import React, { useState, useContext } from 'react';
 import { searchMusic } from '../services/youtube';
 import { AudioContext, Track } from '../context/AudioContext';
-import { Search } from 'lucide-react';
+import { Search, Download, CheckCircle, Loader } from 'lucide-react';
 
 export const SearchView: React.FC = () => {
   const [query, setQuery] = useState('');
@@ -10,6 +10,8 @@ export const SearchView: React.FC = () => {
   const [zoom, setZoom] = useState(1);
   const audioContext = useContext(AudioContext);
   const currentTrackId = audioContext?.currentTrack?.id;
+  const downloadedIds = audioContext?.downloadedIds ?? new Set<string>();
+  const downloadingIds = audioContext?.downloadingIds ?? new Set<string>();
 
   const handleWheel = (e: React.WheelEvent) => {
     const delta = e.deltaY > 0 ? -0.05 : 0.05;
@@ -34,15 +36,27 @@ export const SearchView: React.FC = () => {
     executeSearch(query);
   };
 
+  const toTrack = (s: any): Track => ({
+    id: s.id,
+    title: s.name,
+    artist: s.artists?.[0]?.name || 'Unknown Artist',
+    thumbnail: s.thumbnails?.[0]?.url || '',
+  });
+
   const playSong = (song: any) => {
-    const tracks: Track[] = results.map((s) => ({
-      id: s.id,
-      title: s.name,
-      artist: s.artists?.[0]?.name || 'Unknown Artist',
-      thumbnail: s.thumbnails?.[0]?.url || '',
-    }));
+    const tracks = results.map(toTrack);
     const track = tracks.find((t) => t.id === song.id);
     if (track) audioContext?.playTrack(track, tracks);
+  };
+
+  const handleDownload = (e: React.MouseEvent, song: any) => {
+    e.stopPropagation();
+    const track = toTrack(song);
+    if (downloadedIds.has(track.id)) {
+      audioContext?.removeDownload(track.id);
+    } else {
+      audioContext?.downloadTrack(track);
+    }
   };
 
   return (
@@ -73,7 +87,7 @@ export const SearchView: React.FC = () => {
       </form>
 
       {/* Grid Headers */}
-      <div className="grid grid-cols-[30px_1fr_160px_40px] gap-x-[14px] px-[10px] pb-[8px] border-b border-[var(--bd)] mb-[2px]">
+      <div className="grid grid-cols-[30px_1fr_160px_32px] gap-x-[14px] px-[10px] pb-[8px] border-b border-[var(--bd)] mb-[2px]">
         <div className="text-[8px] text-[var(--tt)] tracking-[0.1em] uppercase" style={{ fontFamily: 'var(--fm)' }}>#</div>
         <div className="text-[8px] text-[var(--tt)] tracking-[0.1em] uppercase" style={{ fontFamily: 'var(--fm)' }}>Track</div>
         <div className="text-[8px] text-[var(--tt)] tracking-[0.1em] uppercase" style={{ fontFamily: 'var(--fm)' }}>Artist</div>
@@ -83,11 +97,13 @@ export const SearchView: React.FC = () => {
       <div className="flex flex-col">
         {results.map((song, idx) => {
           const active = currentTrackId === song.id;
+          const isDownloaded = downloadedIds.has(song.id);
+          const isDownloading = downloadingIds.has(song.id);
           return (
             <div
               key={song.id}
               onClick={() => playSong(song)}
-              className={`grid grid-cols-[30px_1fr_160px_40px] gap-x-[14px] items-center px-[10px] py-[7px] rounded-[5px] cursor-pointer border-l-2 transition-colors ${active ? 'bg-[var(--gold-g)] border-[var(--gold)]' : 'border-transparent hover:bg-white/[0.025]'}`}
+              className={`grid grid-cols-[30px_1fr_160px_32px] gap-x-[14px] items-center px-[10px] py-[7px] rounded-[5px] cursor-pointer border-l-2 transition-colors ${active ? 'bg-[var(--gold-g)] border-[var(--gold)]' : 'border-transparent hover:bg-white/[0.025]'}`}
             >
               <span className="text-[10px] text-[var(--tt)] text-center" style={{ fontFamily: 'var(--fm)' }}>
                 {active ? (
@@ -103,7 +119,20 @@ export const SearchView: React.FC = () => {
                 <span className={`text-[12px] font-medium tracking-[0.01em] truncate ${active ? 'text-[var(--gold)]' : 'text-[var(--tp)]'}`}>{song.name}</span>
               </div>
               <span className="text-[10px] text-[var(--ts)] truncate tracking-[0.02em]" style={{ fontFamily: 'var(--fm)' }}>{song.artists?.[0]?.name}</span>
-              <div></div>
+              <button
+                onClick={(e) => handleDownload(e, song)}
+                title={isDownloaded ? 'Remove download' : isDownloading ? 'Downloading…' : 'Download for offline'}
+                className="flex items-center justify-center w-7 h-7 rounded-[4px] transition-colors hover:bg-white/[0.06] disabled:opacity-40"
+                disabled={isDownloading}
+              >
+                {isDownloading ? (
+                  <Loader size={13} className="text-[var(--gold)] animate-spin" />
+                ) : isDownloaded ? (
+                  <CheckCircle size={13} className="text-[var(--gold)]" />
+                ) : (
+                  <Download size={13} className="text-[var(--tt)] hover:text-[var(--ts)]" />
+                )}
+              </button>
             </div>
           );
         })}
