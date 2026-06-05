@@ -11,14 +11,14 @@ const QUALITIES: { value: AudioQuality; label: string; sub: string; badge: strin
   {
     value: 'high',
     label: 'High',
-    sub: 'Best available bitrate — opus ~160 kbps or AAC 128 kbps',
-    badge: '160kbps',
+    sub: 'Highest available — prefers Opus ~160 kbps (falls back to AAC). Recommended.',
+    badge: 'Opus 160',
   },
   {
     value: 'medium',
     label: 'Medium',
-    sub: 'Balanced — opus ~70 kbps, good for most connections',
-    badge: '70kbps',
+    sub: 'Balanced mid-tier bitrate — good for most connections',
+    badge: '~96kbps',
   },
   {
     value: 'low',
