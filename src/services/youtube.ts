@@ -109,7 +109,38 @@ async function getStreamClient(): Promise<Innertube> {
   return streamYtInit;
 }
 
-type FeedTrack = { id: string; name: string; artists: { name: string }[]; thumbnails: { url: string }[] };
+type FeedTrack = {
+  id: string;           // videoId for songs, browseId for albums
+  name: string;
+  artists: { name: string }[];
+  thumbnails: { url: string }[];
+  itemType?: 'song' | 'video' | 'album'; // album cards need different click handling
+};
+
+// Fetches all playable tracks from a YouTube Music album by its browse ID.
+export async function getAlbumTracks(browseId: string): Promise<
+  { id: string; title: string; artist: string; thumbnail: string }[]
+> {
+  const client = await getClient();
+  const album = await client.music.getAlbum(browseId);
+  const results: { id: string; title: string; artist: string; thumbnail: string }[] = [];
+
+  for (const item of (album.contents as any) ?? []) {
+    const id: string = item.id ?? item.video_id ?? '';
+    if (!id) continue;
+
+    const title = typeof item.title === 'string' ? item.title : (item.title?.toString?.() ?? 'Unknown');
+    const artist: string = item.artists?.[0]?.name ?? item.author ?? '';
+
+    // Album tracks share the album thumbnail or have their own
+    const thumbData = item.thumbnail?.contents ?? item.thumbnail?.thumbnails ?? [];
+    const thumbArr: any[] = Array.isArray(thumbData) ? thumbData : [];
+    const thumbnail = thumbArr[thumbArr.length - 1]?.url ?? thumbArr[0]?.url ?? '';
+
+    results.push({ id, title, artist, thumbnail });
+  }
+  return results;
+}
 
 // Returns related tracks for auto-queue via YouTube Music's automix/radio feature.
 export async function getRelatedTracks(videoId: string): Promise<
@@ -163,16 +194,34 @@ export async function getHomeFeed(): Promise<{ title: string; tracks: FeedTrack[
 }
 
 // Normalises a MusicTwoRowItem from the home feed into a FeedTrack.
-// Only accepts songs and videos (item_type = 'song' | 'video') so albums and
-// playlists (which have browse IDs instead of video IDs) are excluded.
+// Songs and videos get their videoId; albums get their browseId and itemType='album'.
+// Playlists and artists are excluded (too broad to show as a card).
 function normalizeFeedItem(item: any): FeedTrack | null {
   if (!item) return null;
 
-  // Only playable types — albums/playlists/artists have browse IDs, not video IDs
   const type: string = item.item_type ?? '';
-  if (type && type !== 'song' && type !== 'video' && type !== 'endpoint') return null;
 
-  // endpoint.payload.videoId is the canonical video ID for MusicTwoRowItem songs
+  // Handle albums — pass through with browseId so HomeContent can fetch their tracks
+  if (type === 'album') {
+    const browseId: string = item.endpoint?.payload?.browseId ?? item.id ?? '';
+    if (!browseId) return null;
+
+    let name = 'Unknown';
+    if (typeof item.title === 'string') name = item.title;
+    else if (item.title?.text) name = item.title.text;
+    else if (item.title?.runs?.[0]?.text) name = item.title.runs[0].text;
+
+    const artist: string = item.artists?.[0]?.name ?? item.author?.name ?? '';
+    const thumb: any[] = Array.isArray(item.thumbnail) ? item.thumbnail : [];
+    const thumbnailUrl = thumb[thumb.length - 1]?.url ?? thumb[0]?.url ?? item.thumbnails?.[0]?.url ?? '';
+
+    return { id: browseId, name, artists: [{ name: artist }], thumbnails: [{ url: thumbnailUrl }], itemType: 'album' };
+  }
+
+  // Exclude playlists and artists
+  if (type === 'playlist' || type === 'artist') return null;
+
+  // Songs / videos — need a real 11-char videoId
   const videoId: string =
     item.endpoint?.payload?.videoId ??
     item.video_id ??
@@ -212,6 +261,7 @@ function normalizeFeedItem(item: any): FeedTrack | null {
     name,
     artists: [{ name: artist }],
     thumbnails: [{ url: thumbnailUrl }],
+    itemType: (type === 'video' ? 'video' : 'song') as 'song' | 'video',
   };
 }
 
@@ -288,6 +338,16 @@ let playToken = 0;
 const urlCache = new Map<string, { url: string; expiresAt: number }>();
 const URL_CACHE_TTL_MS = 50 * 60 * 1000;
 
+// Permanent skip list: IDs where every client returned "unavailable".
+// Checked before any resolution attempt so the skip cascade is instant.
+const unplayableIds = new Set<string>();
+export function isUnplayable(videoId: string): boolean {
+  return unplayableIds.has(videoId);
+}
+export function markUnplayable(videoId: string): void {
+  unplayableIds.add(videoId);
+}
+
 function getCachedUrl(videoId: string): string | null {
   const entry = urlCache.get(videoId);
   if (!entry) return null;
@@ -338,6 +398,8 @@ export async function getAudioStreamUrl(videoId: string): Promise<string> {
   const cached = getCachedUrl(videoId);
   if (cached) return cached;
 
+  if (unplayableIds.has(videoId)) throw new Error(`${videoId} is unplayable (cached)`);
+
   // Share one in-flight resolution across concurrent callers for the same id
   let promise = inFlightUrls.get(videoId);
   if (!promise) {
@@ -385,6 +447,8 @@ async function resolveStreamUrl(videoId: string): Promise<string> {
     }
   }
 
+  // Every client failed — record this ID so future attempts skip it instantly
+  unplayableIds.add(videoId);
   throw new Error(`No playable stream. Last: ${lastReason}`);
 }
 

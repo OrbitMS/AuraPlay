@@ -8,6 +8,7 @@ import {
   initAudioPlayer,
   getAudioStreamUrl,
   getRelatedTracks,
+  isUnplayable,
 } from '../services/youtube';
 import {
   downloadTrackOffline,
@@ -210,9 +211,21 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   };
 
   const playIndex = (index: number) => {
+    const track = queue[index];
+    if (!track) return;
+    // If this ID is known-unplayable, skip it immediately without a network attempt
+    if (isUnplayable(track.id)) {
+      skipCountRef.current += 1;
+      if (skipCountRef.current < queue.length) {
+        const next = getNextIndex(index, queue.length, { shuffle: isShuffling, repeatMode, auto: true });
+        if (next !== null) { playIndex(next); return; }
+      }
+      setIsPlaying(false);
+      return;
+    }
     setCurrentIndex(index);
     setIsPlaying(true);
-    nativePlayTrack(queue[index].id).catch(err => console.error("Playback failed:", err));
+    nativePlayTrack(track.id).catch(err => console.error("Playback failed:", err));
   };
 
   // `auto` is true when called from the 'ended' handler (vs. the user clicking
