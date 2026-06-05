@@ -3,7 +3,7 @@ import { searchMusic } from '../services/youtube';
 import { AudioContext, Track } from '../context/AudioContext';
 import { useLikes } from '../hooks/useLikes';
 import { HomeContent } from '../components/HomeContent';
-import { Search, Download, CheckCircle, Loader, Heart } from 'lucide-react';
+import { Search, Download, CheckCircle, Loader, Heart, Minus, Plus } from 'lucide-react';
 
 export const SearchView: React.FC = () => {
   const [query, setQuery] = useState('');
@@ -17,10 +17,9 @@ export const SearchView: React.FC = () => {
   const downloadingIds = audioContext?.downloadingIds ?? new Set<string>();
   const { toggle: toggleLike, isLiked } = useLikes();
 
-  const handleWheel = (e: React.WheelEvent) => {
-    const delta = e.deltaY > 0 ? -0.05 : 0.05;
-    setZoom((prev) => Math.min(Math.max(prev + delta, 0.5), 1.5));
-  };
+  const zoomIn  = () => setZoom((p) => Math.min(p + 0.1, 1.5));
+  const zoomOut = () => setZoom((p) => Math.max(p - 0.1, 0.5));
+  const zoomReset = () => setZoom(1);
 
   const executeSearch = async (searchStr: string) => {
     if (!searchStr.trim()) return;
@@ -65,10 +64,33 @@ export const SearchView: React.FC = () => {
   };
 
   return (
-    <div onWheel={handleWheel} className="px-[36px] pt-[32px] pb-[40px] w-full origin-top-left transition-transform duration-100" style={{ transform: `scale(${zoom})` }}>
-      {/* Page heading */}
-      <h1 className="text-[28px] text-[var(--tp)] tracking-[-0.01em] leading-[1.1]" style={{ fontFamily: 'var(--fd)' }}>Discover Music</h1>
-      <div className="text-[10px] text-[var(--tt)] mt-1.5 tracking-[0.08em] uppercase" style={{ fontFamily: 'var(--fm)' }}>Search · Stream · Explore</div>
+    <div className="px-[36px] pt-[32px] pb-[40px] w-full origin-top transition-transform duration-150" style={{ transform: `scale(${zoom})` }}>
+      {/* Page heading + zoom control */}
+      <div className="flex items-start justify-between">
+        <div>
+          <h1 className="text-[28px] text-[var(--tp)] tracking-[-0.01em] leading-[1.1]" style={{ fontFamily: 'var(--fd)' }}>Discover Music</h1>
+          <div className="text-[10px] text-[var(--tt)] mt-1.5 tracking-[0.08em] uppercase" style={{ fontFamily: 'var(--fm)' }}>Search · Stream · Explore</div>
+        </div>
+
+        {/* Sleek zoom control */}
+        <div className="flex items-center gap-0.5 rounded-[8px] p-0.5" style={{ background: 'var(--s1)', border: '1px solid var(--bd)' }}>
+          <button onClick={zoomOut} title="Zoom out" disabled={zoom <= 0.5}
+            className="w-7 h-7 flex items-center justify-center rounded-[6px] transition-colors hover:bg-white/[0.06] disabled:opacity-30"
+            style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--ts)' }}>
+            <Minus size={13} />
+          </button>
+          <button onClick={zoomReset} title="Reset zoom"
+            className="px-1.5 h-7 flex items-center justify-center rounded-[6px] transition-colors hover:bg-white/[0.06] tabular-nums"
+            style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--ts)', fontFamily: 'var(--fm)', fontSize: 10, minWidth: 38 }}>
+            {Math.round(zoom * 100)}%
+          </button>
+          <button onClick={zoomIn} title="Zoom in" disabled={zoom >= 1.5}
+            className="w-7 h-7 flex items-center justify-center rounded-[6px] transition-colors hover:bg-white/[0.06] disabled:opacity-30"
+            style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--ts)' }}>
+            <Plus size={13} />
+          </button>
+        </div>
+      </div>
 
       {/* Search row */}
       <form onSubmit={handleSearch} className="flex gap-2.5 mt-6 mb-7">

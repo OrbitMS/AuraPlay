@@ -105,3 +105,11 @@ button:focus-visible { outline: 1.5px solid rgba(201,168,76,0.5); outline-offset
   50%  { width: 75%; opacity: 1;   }
   100% { width: 30%; opacity: 0.6; }
 }
+
+@keyframes np-in {
+  from { transform: translateY(100%); opacity: 0.4; }
+  to   { transform: translateY(0);    opacity: 1;   }
+}
+.animate-np-in {
+  animation: np-in 0.32s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}

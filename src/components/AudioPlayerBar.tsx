@@ -1,10 +1,13 @@
 import React, { useContext, useRef, useState, useEffect, useCallback } from 'react';
 import { AudioContext } from '../context/AudioContext';
 import { subscribeToProgress, seekTo } from '../services/youtube';
+import { Visualizer } from './Visualizer';
+import { ChevronUp, ListMusic } from 'lucide-react';
 
 interface Props {
   onQueueToggle: () => void;
   queueOpen: boolean;
+  onExpand: () => void;
 }
 
 function fmt(sec: number): string {
@@ -14,7 +17,7 @@ function fmt(sec: number): string {
   return `${m}:${s.toString().padStart(2, '0')}`;
 }
 
-export const AudioPlayerBar: React.FC<Props> = ({ onQueueToggle, queueOpen }) => {
+export const AudioPlayerBar: React.FC<Props> = ({ onQueueToggle, queueOpen, onExpand }) => {
   const audioContext = useContext(AudioContext);
   const volumeBarRef   = useRef<HTMLDivElement>(null);
   const progressBarRef = useRef<HTMLDivElement>(null);
@@ -88,8 +91,21 @@ export const AudioPlayerBar: React.FC<Props> = ({ onQueueToggle, queueOpen }) =>
       <div className="absolute top-0 left-[8%] right-[8%] h-px"
         style={{ background: 'linear-gradient(90deg, transparent, rgba(201,168,76,0.3), transparent)' }} />
 
-      {/* ── LEFT: Now Playing ─────────────────────────────────────────────── */}
-      <div className="flex items-center gap-4 min-w-0" style={{ width: '28%' }}>
+      {/* Ambient visualizer strip along the bottom edge */}
+      <div className="absolute left-0 right-0 bottom-0 pointer-events-none overflow-hidden"
+        style={{ height: 22, opacity: 0.45, maskImage: 'linear-gradient(180deg, transparent, black)', WebkitMaskImage: 'linear-gradient(180deg, transparent, black)' }}>
+        <Visualizer active={isPlaying} height={22} />
+      </div>
+
+      {/* ── LEFT: Now Playing (click to expand) ───────────────────────────── */}
+      <div
+        onClick={(currentTrack || radioStation) ? onExpand : undefined}
+        title={(currentTrack || radioStation) ? 'Open Now Playing' : undefined}
+        className="group flex items-center gap-4 min-w-0 rounded-[10px] -ml-2 pl-2 pr-3 py-2 transition-colors"
+        style={{ width: '28%', cursor: (currentTrack || radioStation) ? 'pointer' : 'default' }}
+        onMouseEnter={e => { if (currentTrack || radioStation) (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.04)'; }}
+        onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
+      >
         {radioStation ? (
           <>
             {/* Radio artwork */}
@@ -142,6 +158,11 @@ export const AudioPlayerBar: React.FC<Props> = ({ onQueueToggle, queueOpen }) =>
             <span className="text-[12px]" style={{ color: 'var(--tt)' }}>Nothing playing</span>
           </>
         )}
+
+        {/* Expand hint */}
+        {(currentTrack || radioStation) && (
+          <ChevronUp size={16} className="flex-shrink-0 opacity-0 group-hover:opacity-60 transition-opacity ml-1" style={{ color: 'var(--gold)' }} />
+        )}
       </div>
 
       {/* ── CENTER: Controls + Progress ───────────────────────────────────── */}
@@ -150,9 +171,9 @@ export const AudioPlayerBar: React.FC<Props> = ({ onQueueToggle, queueOpen }) =>
         {/* Transport buttons */}
         <div className="flex items-center gap-6">
           {/* Shuffle */}
-          <button onClick={() => setShuffling(!isShuffling)}
-            className="cursor-pointer p-1 rounded transition-all"
-            style={{ background: 'none', border: 'none', color: isShuffling ? 'var(--gold)' : 'var(--tt)', opacity: isShuffling ? 1 : 0.7 }}
+          <button onClick={() => setShuffling(!isShuffling)} disabled={isLive}
+            className="p-1 rounded transition-all"
+            style={{ background: 'none', border: 'none', cursor: isLive ? 'default' : 'pointer', color: isShuffling ? 'var(--gold)' : 'var(--tt)', opacity: isLive ? 0.3 : (isShuffling ? 1 : 0.7) }}
             title="Shuffle">
             <svg width={T} height={T} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
               <polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/><polyline points="21 16 21 21 16 21"/><line x1="15" y1="15" x2="21" y2="21"/><line x1="4" y1="4" x2="9" y2="9"/>
@@ -160,7 +181,8 @@ export const AudioPlayerBar: React.FC<Props> = ({ onQueueToggle, queueOpen }) =>
           </button>
 
           {/* Prev */}
-          <button onClick={prevTrack} style={{ background: 'none', border: 'none', color: 'var(--ts)', cursor: 'pointer', padding: '4px' }}
+          <button onClick={prevTrack} disabled={isLive}
+            style={{ background: 'none', border: 'none', color: 'var(--ts)', cursor: isLive ? 'default' : 'pointer', padding: '4px', opacity: isLive ? 0.3 : 1 }}
             className="hover:text-[var(--tp)] transition-colors" title="Previous">
             <svg width={S} height={S} viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
               <polygon points="19 20 9 12 19 4 19 20"/><line x1="5" y1="5" x2="5" y2="19"/>
@@ -188,7 +210,8 @@ export const AudioPlayerBar: React.FC<Props> = ({ onQueueToggle, queueOpen }) =>
           </button>
 
           {/* Next */}
-          <button onClick={() => nextTrack()} style={{ background: 'none', border: 'none', color: 'var(--ts)', cursor: 'pointer', padding: '4px' }}
+          <button onClick={() => nextTrack()} disabled={isLive}
+            style={{ background: 'none', border: 'none', color: 'var(--ts)', cursor: isLive ? 'default' : 'pointer', padding: '4px', opacity: isLive ? 0.3 : 1 }}
             className="hover:text-[var(--tp)] transition-colors" title="Next">
             <svg width={S} height={S} viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
               <polygon points="5 4 15 12 5 20 5 4"/><line x1="19" y1="5" x2="19" y2="19"/>
@@ -196,9 +219,9 @@ export const AudioPlayerBar: React.FC<Props> = ({ onQueueToggle, queueOpen }) =>
           </button>
 
           {/* Repeat */}
-          <button onClick={cycleRepeat} title={`Repeat: ${repeatMode}`}
-            className="cursor-pointer p-1 rounded relative transition-all"
-            style={{ background: 'none', border: 'none', color: repeatMode !== 'off' ? 'var(--gold)' : 'var(--tt)', opacity: repeatMode !== 'off' ? 1 : 0.7 }}>
+          <button onClick={cycleRepeat} disabled={isLive} title={`Repeat: ${repeatMode}`}
+            className="p-1 rounded relative transition-all"
+            style={{ background: 'none', border: 'none', cursor: isLive ? 'default' : 'pointer', color: repeatMode !== 'off' ? 'var(--gold)' : 'var(--tt)', opacity: isLive ? 0.3 : (repeatMode !== 'off' ? 1 : 0.7) }}>
             <svg width={T} height={T} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
               <polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/>
             </svg>
@@ -281,20 +304,21 @@ export const AudioPlayerBar: React.FC<Props> = ({ onQueueToggle, queueOpen }) =>
           {volume}
         </span>
 
-        {/* Queue toggle */}
+        {/* Queue toggle — prominent pill button */}
         <button onClick={onQueueToggle} title={queueOpen ? 'Close queue' : 'Open queue'}
-          className="flex items-center justify-center rounded-[6px] transition-all"
+          className="flex items-center gap-1.5 rounded-[9px] transition-all hover:scale-[1.04] active:scale-95 ml-1"
           style={{
-            width: 32, height: 32, border: 'none', cursor: 'pointer',
-            background: queueOpen ? 'rgba(201,168,76,0.12)' : 'rgba(255,255,255,0.04)',
-            color: queueOpen ? 'var(--gold)' : 'var(--ts)',
-            outline: queueOpen ? '1px solid rgba(201,168,76,0.3)' : '1px solid transparent',
+            height: 40, padding: '0 14px', border: 'none', cursor: 'pointer',
+            background: queueOpen
+              ? 'linear-gradient(135deg, var(--gold-b), var(--gold))'
+              : 'rgba(201,168,76,0.14)',
+            color: queueOpen ? 'var(--obsidian)' : 'var(--gold)',
+            outline: queueOpen ? 'none' : '1px solid rgba(201,168,76,0.35)',
+            boxShadow: queueOpen ? '0 3px 14px rgba(201,168,76,0.35)' : 'none',
+            fontFamily: 'var(--fm)',
           }}>
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-            <line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/>
-            <line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/>
-            <line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/>
-          </svg>
+          <ListMusic size={17} strokeWidth={2} />
+          <span className="text-[11px] font-bold tracking-[0.08em] uppercase">Queue</span>
         </button>
       </div>
     </div>

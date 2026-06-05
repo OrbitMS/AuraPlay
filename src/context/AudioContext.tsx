@@ -211,11 +211,12 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   };
 
   const togglePlay = async () => {
-    if (!currentTrack) return;
+    // Works for both regular tracks and radio (radio has no currentTrack)
+    if (!currentTrack && !radioStation) return;
     try {
       if (isPlaying) {
         await nativePauseTrack();
-        setIsPlaying(false); 
+        setIsPlaying(false);
       } else {
         await nativeResumeTrack();
         setIsPlaying(true);

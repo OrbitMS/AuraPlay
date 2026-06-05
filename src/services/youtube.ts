@@ -358,6 +358,43 @@ let currentVolume = 0.7;
 // after the user already picked another track does not clobber the new one.
 let playToken = 0;
 
+// ── Web Audio analyser (for the visualizer) ───────────────────────────────────
+// Lazily created. createMediaElementSource reroutes audio through the graph, so
+// the source MUST connect to destination or playback goes silent. For cross-
+// origin streams without CORS the analyser returns zeros — the visualizer falls
+// back to a synthetic animation in that case. Playback is never affected.
+let webAudioCtx: AudioContext | null = null;
+let analyserNode: AnalyserNode | null = null;
+let mediaSource: MediaElementAudioSourceNode | null = null;
+let analyserSetupTried = false;
+
+function setupAnalyser(): void {
+  if (analyserSetupTried || !audioEl) return;
+  analyserSetupTried = true;
+  try {
+    const Ctx = window.AudioContext || (window as any).webkitAudioContext;
+    if (!Ctx) return;
+    webAudioCtx = new Ctx();
+    mediaSource = webAudioCtx.createMediaElementSource(audioEl);
+    analyserNode = webAudioCtx.createAnalyser();
+    analyserNode.fftSize = 128;
+    analyserNode.smoothingTimeConstant = 0.8;
+    mediaSource.connect(analyserNode);
+    analyserNode.connect(webAudioCtx.destination);
+  } catch (err) {
+    console.warn('Visualizer analyser unavailable:', err);
+    analyserNode = null;
+  }
+}
+
+/** Returns the shared AnalyserNode (sets it up on first call). May be null. */
+export function getAnalyser(): AnalyserNode | null {
+  if (!analyserNode) setupAnalyser();
+  // Resume context if the autoplay policy suspended it
+  if (webAudioCtx?.state === 'suspended') webAudioCtx.resume().catch(() => {});
+  return analyserNode;
+}
+
 // ── Audio quality preference ──────────────────────────────────────────────────
 // 'high'   → best bitrate (opus ~160 kbps or m4a 128 kbps) — default
 // 'medium' → mid bitrate (opus ~70 kbps or m4a 128 kbps)
