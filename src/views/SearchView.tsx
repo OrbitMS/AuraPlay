@@ -2,11 +2,13 @@ import React, { useState, useContext } from 'react';
 import { searchMusic } from '../services/youtube';
 import { AudioContext, Track } from '../context/AudioContext';
 import { useLikes } from '../hooks/useLikes';
+import { HomeContent } from '../components/HomeContent';
 import { Search, Download, CheckCircle, Loader, Heart } from 'lucide-react';
 
 export const SearchView: React.FC = () => {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<any[]>([]);
+  const [hasSearched, setHasSearched] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [zoom, setZoom] = useState(1);
   const audioContext = useContext(AudioContext);
@@ -23,6 +25,7 @@ export const SearchView: React.FC = () => {
   const executeSearch = async (searchStr: string) => {
     if (!searchStr.trim()) return;
     setIsLoading(true);
+    setHasSearched(true);
     try {
       const songs = await searchMusic(searchStr);
       setResults(songs);
@@ -88,7 +91,12 @@ export const SearchView: React.FC = () => {
         </button>
       </form>
 
-      {/* Grid Headers */}
+      {/* Home feed (shown before first search) */}
+      {!hasSearched && <HomeContent />}
+
+      {/* Search results */}
+      {hasSearched && (
+      <>
       <div className="grid grid-cols-[30px_1fr_160px_32px_32px] gap-x-[14px] px-[10px] pb-[8px] border-b border-[var(--bd)] mb-[2px]">
         <div className="text-[8px] text-[var(--tt)] tracking-[0.1em] uppercase" style={{ fontFamily: 'var(--fm)' }}>#</div>
         <div className="text-[8px] text-[var(--tt)] tracking-[0.1em] uppercase" style={{ fontFamily: 'var(--fm)' }}>Track</div>
@@ -154,6 +162,8 @@ export const SearchView: React.FC = () => {
           );
         })}
       </div>
+      </>
+      )}
     </div>
   );
 };
