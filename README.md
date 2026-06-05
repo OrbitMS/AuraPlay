@@ -6,7 +6,9 @@ Finally, bring the power of Metrolist to your workstation. Enjoy the seamless mu
 
 Metrolist Desktop brings the popular open-source Android music client to your computer.
 
-<img width="979" height="587" alt="image" src="https://github.com/user-attachments/assets/9f08c732-9203-4926-98af-e7d944cad843" />
+
+<img width="1150" height="849" alt="image" src="https://github.com/user-attachments/assets/4e91d39c-3fd3-409a-80c6-61f8e38c858d" />
+
 
 
 ## Features
