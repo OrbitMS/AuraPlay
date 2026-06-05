@@ -172,6 +172,28 @@ export async function getRelatedTracks(videoId: string): Promise<
   }
 }
 
+/** Fetches the YouTube Music Explore page — contains New Releases, Charts, Moods etc. */
+export async function getExploreSections(): Promise<{ title: string; tracks: FeedTrack[] }[]> {
+  const client = await getClient();
+  const explore = await client.music.getExplore();
+  const sections: { title: string; tracks: FeedTrack[] }[] = [];
+
+  for (const shelf of (explore as any).sections ?? []) {
+    const rawTitle = (shelf as any).header?.title;
+    const title: string =
+      typeof rawTitle === 'string' ? rawTitle : rawTitle?.text ?? rawTitle?.runs?.[0]?.text ?? '';
+    const items: any[] = (shelf as any).contents ?? [];
+    const tracks: FeedTrack[] = [];
+    for (const item of items) {
+      const t = normalizeFeedItem(item);
+      if (t) tracks.push(t);
+    }
+    if (tracks.length > 0) sections.push({ title, tracks });
+    if (sections.length >= 3) break;
+  }
+  return sections;
+}
+
 export async function getHomeFeed(): Promise<{ title: string; tracks: FeedTrack[] }[]> {
   const client = await getClient();
   const feed = await client.music.getHomeFeed();
@@ -336,6 +358,20 @@ let currentVolume = 0.7;
 // after the user already picked another track does not clobber the new one.
 let playToken = 0;
 
+// ── Audio quality preference ──────────────────────────────────────────────────
+// 'high'   → best bitrate (opus ~160 kbps or m4a 128 kbps) — default
+// 'medium' → mid bitrate (opus ~70 kbps or m4a 128 kbps)
+// 'low'    → lowest available (opus ~50 kbps / m4a 48 kbps)
+type AudioQuality = 'high' | 'medium' | 'low';
+let audioQualityPref: AudioQuality = 'high';
+
+export function setAudioQuality(q: AudioQuality): void {
+  if (q === audioQualityPref) return;
+  audioQualityPref = q;
+  // Invalidate cached URLs — they were resolved at the old quality
+  urlCache.clear();
+}
+
 // In-memory URL cache: resolved stream URLs are valid for ~6h; cache for 50min.
 const urlCache = new Map<string, { url: string; expiresAt: number }>();
 const URL_CACHE_TTL_MS = 50 * 60 * 1000;
@@ -453,9 +489,19 @@ async function resolveStreamUrl(videoId: string): Promise<string> {
         lastReason = `${c}: ${ps?.status ?? 'NO_DATA'} ${ps?.reason ?? ''}`.trim();
         continue;
       }
-      const format = info.chooseFormat({ type: 'audio', quality: 'best' });
-      const f = format as unknown as { itag?: number; url?: string; signature_cipher?: string; cipher?: string };
-      console.log(`[stream] ${c}: itag=${f.itag} hasUrl=${!!f.url} hasSigCipher=${!!f.signature_cipher} hasCipher=${!!f.cipher}`);
+      // Quality mapping:
+      //   high   → highest bitrate (quality:'best', any codec)
+      //   medium → prefer opus efficiency tier, fall back to mp4a best
+      //   low    → lowest bitrate (quality:'bestefficiency')
+      const formatOpts =
+        audioQualityPref === 'low'
+          ? { type: 'audio' as const, quality: 'bestefficiency' as const, format: 'any' as const }
+          : audioQualityPref === 'medium'
+          ? { type: 'audio' as const, quality: 'bestefficiency' as const }
+          : { type: 'audio' as const, quality: 'best' as const };
+      const format = info.chooseFormat(formatOpts);
+      const f = format as unknown as { itag?: number; url?: string; signature_cipher?: string; cipher?: string; bitrate?: number };
+      console.log(`[stream] ${c}: itag=${f.itag} bitrate=${f.bitrate ?? '?'} quality=${audioQualityPref}`);
       const url = await format.decipher(client.session.player);
       if (url) {
         console.log(`[stream] ${c}: resolved playable URL`);

@@ -1,5 +1,10 @@
 import React, { useEffect, useState, useContext } from 'react';
-import { getHomeFeed, getRelatedTracks, getAlbumTracks } from '../services/youtube';
+import {
+  getHomeFeed,
+  getExploreSections,
+  getRelatedTracks,
+  getAlbumTracks,
+} from '../services/youtube';
 import { AudioContext, type Track } from '../context/AudioContext';
 import { useHistory } from '../hooks/useHistory';
 import { useLikes } from '../hooks/useLikes';
@@ -13,23 +18,17 @@ type SongCard = {
   itemType?: 'song' | 'video' | 'album';
 };
 
+/* ─────────────────────────── TrackCard ──────────────────────────────────── */
 function TrackCard({
-  song,
-  onPlay,
-  active,
-  loading,
+  song, onPlay, active, loading: cardLoading,
 }: {
-  song: SongCard;
-  onPlay: () => void;
-  active: boolean;
-  loading?: boolean;
+  song: SongCard; onPlay: () => void; active: boolean; loading?: boolean;
 }) {
   const { toggle, isLiked } = useLikes();
   const liked = isLiked(song.id);
   const isAlbum = song.itemType === 'album';
   const track: Track = {
-    id: song.id,
-    title: song.name,
+    id: song.id, title: song.name,
     artist: song.artists?.[0]?.name ?? '',
     thumbnail: song.thumbnails?.[0]?.url ?? '',
   };
@@ -37,11 +36,11 @@ function TrackCard({
   return (
     <div
       onClick={onPlay}
-      className={`group relative flex-shrink-0 w-[120px] cursor-pointer rounded-[8px] p-2.5 transition-colors ${
+      className={`group relative cursor-pointer rounded-[8px] p-2 transition-colors ${
         active ? 'bg-[var(--gold-g)]' : 'hover:bg-white/[0.04]'
       }`}
     >
-      <div className="relative mb-2.5">
+      <div className="relative mb-2">
         {song.thumbnails?.[0]?.url ? (
           <img
             src={song.thumbnails[0].url}
@@ -68,7 +67,7 @@ function TrackCard({
 
         {/* Play / loading overlay */}
         <div className="absolute inset-0 flex items-center justify-center rounded-[6px] bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity">
-          {loading ? (
+          {cardLoading ? (
             <div className="w-8 h-8 rounded-full bg-[var(--s3)] flex items-center justify-center">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" strokeWidth="2" strokeLinecap="round" className="animate-spin">
                 <path d="M12 2a10 10 0 1 0 0 20"/>
@@ -81,10 +80,10 @@ function TrackCard({
           )}
         </div>
 
-        {/* Like button — only for songs, not albums */}
+        {/* Like button */}
         {!isAlbum && (
           <button
-            onClick={(e) => { e.stopPropagation(); toggle(track); }}
+            onClick={e => { e.stopPropagation(); toggle(track); }}
             title={liked ? 'Remove from favorites' : 'Add to favorites'}
             className="absolute top-1.5 right-1.5 w-6 h-6 rounded-full bg-black/60 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-black/80"
           >
@@ -92,6 +91,7 @@ function TrackCard({
           </button>
         )}
       </div>
+
       <p className={`text-[11px] font-medium truncate leading-tight ${active ? 'text-[var(--gold)]' : 'text-[var(--tp)]'}`}>
         {song.name}
       </p>
@@ -102,13 +102,9 @@ function TrackCard({
   );
 }
 
+/* ─────────────────────────── Section ────────────────────────────────────── */
 function Section({
-  title,
-  songs,
-  onPlay,
-  currentId,
-  loading,
-  loadingAlbumId,
+  title, songs, onPlay, currentId, loading, loadingAlbumId,
 }: {
   title: string;
   songs: SongCard[];
@@ -121,22 +117,24 @@ function Section({
 
   return (
     <div className="mb-8">
-      <h2 className="text-[14px] font-semibold text-[var(--tp)] mb-3 tracking-[-0.01em]">
-        {title}
-      </h2>
+      <h2 className="text-[14px] font-semibold text-[var(--tp)] mb-3 tracking-[-0.01em]">{title}</h2>
       {loading ? (
-        <div className="flex gap-3">
+        /* Skeleton — same responsive grid */
+        <div className="grid gap-3" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(110px, 1fr))' }}>
           {Array.from({ length: 6 }).map((_, i) => (
-            <div key={i} className="flex-shrink-0 w-[120px]">
-              <div className="w-full aspect-square rounded-[6px] bg-[var(--s2)] animate-pulse mb-2.5" />
+            <div key={i}>
+              <div className="w-full aspect-square rounded-[6px] bg-[var(--s2)] animate-pulse mb-2" />
               <div className="h-2.5 w-3/4 rounded bg-[var(--s3)] animate-pulse mb-1.5" />
               <div className="h-2 w-1/2 rounded bg-[var(--s3)] animate-pulse" />
             </div>
           ))}
         </div>
       ) : (
-        <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
-          {songs.map((song) => (
+        <div
+          className="grid gap-3"
+          style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(110px, 1fr))' }}
+        >
+          {songs.map(song => (
             <TrackCard
               key={song.id}
               song={song}
@@ -151,68 +149,94 @@ function Section({
   );
 }
 
+/* ─────────────────────────── HomeContent ────────────────────────────────── */
+type FeedSection = { title: string; tracks: SongCard[] };
+
 export const HomeContent: React.FC = () => {
   const audioContext = useContext(AudioContext);
   const currentTrackId = audioContext?.currentTrack?.id;
   const { history } = useHistory();
-  const [feedSections, setFeedSections] = useState<{ title: string; tracks: SongCard[] }[]>([]);
-  const [loading, setLoading] = useState(true);
+
+  // Each suggestion bucket fetches independently so partial failures don't kill everything
+  const [trending,   setTrending]   = useState<FeedSection[]>([]);
+  const [explore,    setExplore]    = useState<FeedSection[]>([]);
+  const [forYou,     setForYou]     = useState<SongCard[]>([]);
+  const [loadingMap, setLoadingMap] = useState({ trending: true, explore: true, forYou: true });
   const [loadingAlbumId, setLoadingAlbumId] = useState<string | null>(null);
+
+  const setDone = (key: keyof typeof loadingMap) =>
+    setLoadingMap(prev => ({ ...prev, [key]: false }));
 
   useEffect(() => {
     let cancelled = false;
 
-    // Fallback: seed getRelatedTracks from a known-reliable YouTube Music video
-    // (Blinding Lights by The Weeknd — consistently streamable worldwide)
-    const fallback = async () => {
-      const SEED_ID = '4NRXx6U8ABQ';
-      const tracks = await getRelatedTracks(SEED_ID);
-      if (!cancelled && tracks.length > 0) {
-        const cards: SongCard[] = tracks.slice(0, 15).map(t => ({
-          id: t.id, name: t.title, artists: [{ name: t.artist }], thumbnails: [{ url: t.thumbnail }],
-        }));
-        setFeedSections([{ title: 'Popular Right Now', tracks: cards }]);
-      }
-    };
-
+    /* ── Trending: home feed ── */
+    const SEED_ID = '4NRXx6U8ABQ'; // Blinding Lights — reliable seed
     getHomeFeed()
-      .then(async (sections) => {
+      .then(sections => {
         if (cancelled) return;
         if (sections.length > 0) {
-          setFeedSections(sections);
+          setTrending(sections);
         } else {
-          console.warn('Home feed returned empty, falling back to related tracks');
-          await fallback();
+          // Fallback: use automix from seed
+          return getRelatedTracks(SEED_ID).then(tracks => {
+            if (cancelled || tracks.length === 0) return;
+            setTrending([{
+              title: 'Trending Now',
+              tracks: tracks.slice(0, 12).map(t => ({
+                id: t.id, name: t.title,
+                artists: [{ name: t.artist }],
+                thumbnails: [{ url: t.thumbnail }],
+              })),
+            }]);
+          });
         }
       })
-      .catch(async (err) => {
-        console.warn('Home feed failed, falling back to related tracks:', err);
-        if (!cancelled) await fallback().catch(() => {});
+      .catch(() => {}) // Suppress — explore fallback covers this
+      .finally(() => { if (!cancelled) setDone('trending'); });
+
+    /* ── Explore: New Releases + Charts ── */
+    getExploreSections()
+      .then(sections => { if (!cancelled && sections.length > 0) setExplore(sections); })
+      .catch(() => {})
+      .finally(() => { if (!cancelled) setDone('explore'); });
+
+    /* ── For You: related to most-recently-played history track ── */
+    const recentId = history.find(t => !!t.id)?.id;
+    const seedId = recentId ?? SEED_ID;
+    getRelatedTracks(seedId)
+      .then(tracks => {
+        if (cancelled || tracks.length === 0) return;
+        setForYou(tracks.slice(0, 12).map(t => ({
+          id: t.id, name: t.title,
+          artists: [{ name: t.artist }],
+          thumbnails: [{ url: t.thumbnail }],
+        })));
       })
-      .finally(() => { if (!cancelled) setLoading(false); });
+      .catch(() => {})
+      .finally(() => { if (!cancelled) setDone('forYou'); });
 
     return () => { cancelled = true; };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const toTrack = (s: SongCard): Track => ({
-    id: s.id,
-    title: s.name,
+    id: s.id, title: s.name,
     artist: s.artists?.[0]?.name ?? '',
     thumbnail: s.thumbnails?.[0]?.url ?? '',
   });
 
-  const play = async (song: SongCard, _all: SongCard[]) => {
+  const play = async (song: SongCard, all: SongCard[]) => {
     if (song.itemType === 'album') {
-      // Fetch album tracks, then play the first one with the rest queued
       setLoadingAlbumId(song.id);
       try {
-        const albumTracks = await getAlbumTracks(song.id);
-        if (albumTracks.length === 0) return;
-        const tracks = albumTracks.map(t => ({
+        const tracks = await getAlbumTracks(song.id);
+        if (tracks.length === 0) return;
+        const mapped = tracks.map(t => ({
           id: t.id, title: t.title, artist: t.artist,
           thumbnail: t.thumbnail || song.thumbnails?.[0]?.url || '',
         }));
-        audioContext?.playTrack(tracks[0], tracks);
+        audioContext?.playTrack(mapped[0], mapped);
       } catch (err) {
         console.error('Failed to load album tracks:', err);
       } finally {
@@ -220,38 +244,57 @@ export const HomeContent: React.FC = () => {
       }
       return;
     }
-    // Regular song — only play songs (not albums) from the all-cards list
-    const playableSongs = _all.filter(s => s.itemType !== 'album');
-    audioContext?.playTrack(toTrack(song), playableSongs.map(toTrack));
+    const playable = all.filter(s => s.itemType !== 'album');
+    audioContext?.playTrack(toTrack(song), playable.map(toTrack));
   };
 
-  const historyCards: SongCard[] = history.map((t) => ({
-    id: t.id,
-    name: t.title,
+  const historyCards: SongCard[] = history.map(t => ({
+    id: t.id, name: t.title,
     artists: [{ name: t.artist }],
     thumbnails: [{ url: t.thumbnail }],
   }));
 
   return (
     <div>
-      {/* Recently played */}
+      {/* Recently Played */}
       {historyCards.length > 0 && (
-        <Section
-          title="Recently Played"
-          songs={historyCards}
-          onPlay={play}
-          currentId={currentTrackId}
-        />
+        <Section title="Recently Played" songs={historyCards} onPlay={play} currentId={currentTrackId} loadingAlbumId={loadingAlbumId} />
       )}
 
-      {/* Home feed sections from YouTube Music */}
-      {loading && feedSections.length === 0 ? (
-        <Section title="Popular Right Now" songs={[]} onPlay={() => {}} loading />
+      {/* For You — history-seeded suggestions */}
+      <Section
+        title={history.length > 0 ? 'Based on Your History' : 'Recommended For You'}
+        songs={forYou}
+        onPlay={play}
+        currentId={currentTrackId}
+        loading={loadingMap.forYou && forYou.length === 0}
+        loadingAlbumId={loadingAlbumId}
+      />
+
+      {/* Trending / home feed */}
+      {loadingMap.trending && trending.length === 0 ? (
+        <Section title="Trending Now" songs={[]} onPlay={() => {}} loading />
       ) : (
-        feedSections.map((sec) => (
+        trending.map(sec => (
           <Section
             key={sec.title}
-            title={sec.title || 'Popular Right Now'}
+            title={sec.title || 'Trending Now'}
+            songs={sec.tracks}
+            onPlay={play}
+            currentId={currentTrackId}
+            loadingAlbumId={loadingAlbumId}
+          />
+        ))
+      )}
+
+      {/* New Releases / Charts from Explore */}
+      {loadingMap.explore && explore.length === 0 ? (
+        <Section title="New Releases" songs={[]} onPlay={() => {}} loading />
+      ) : (
+        explore.map(sec => (
+          <Section
+            key={sec.title}
+            title={sec.title || 'New Releases'}
             songs={sec.tracks}
             onPlay={play}
             currentId={currentTrackId}
