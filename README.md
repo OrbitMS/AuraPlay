@@ -4,7 +4,7 @@
 
 Finally, bring the power of Music to your workstation. Enjoy the seamless music experience you love — now native to Windows.
 
-<img width="960" height="487" alt="AuraPlay" src="https://github.com/user-attachments/assets/cd07e3b0-3f48-4c59-a430-740b69d2e2bd" />
+Download latest Version on the right (.exe) -> install and enjoy!
 
 ---
 
