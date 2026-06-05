@@ -1,16 +1,48 @@
-import React, { useContext, useRef } from 'react';
+import React, { useContext, useRef, useState, useEffect, useCallback } from 'react';
 import { AudioContext } from '../context/AudioContext';
+import { subscribeToProgress, seekTo } from '../services/youtube';
 
 interface Props {
   onQueueToggle: () => void;
   queueOpen: boolean;
 }
 
+/** Format seconds → "m:ss" (e.g. 3:07) */
+function fmt(sec: number): string {
+  if (!isFinite(sec) || sec < 0) return '0:00';
+  const m = Math.floor(sec / 60);
+  const s = Math.floor(sec % 60);
+  return `${m}:${s.toString().padStart(2, '0')}`;
+}
+
 export const AudioPlayerBar: React.FC<Props> = ({ onQueueToggle, queueOpen }) => {
   const audioContext = useContext(AudioContext);
   const volumeBarRef = useRef<HTMLDivElement>(null);
-  const draggingRef = useRef(false);
+  const progressBarRef = useRef<HTMLDivElement>(null);
+  const draggingVolumeRef = useRef(false);
+  const draggingProgressRef = useRef(false);
   const prevVolumeRef = useRef(70);
+
+  // Live playback position — local state so only this component re-renders
+  const [currentTime, setCurrentTime] = useState(0);
+  const [duration, setDuration] = useState(0);
+
+  useEffect(() => {
+    return subscribeToProgress((ct, dur) => {
+      setCurrentTime(ct);
+      setDuration(dur);
+    });
+  }, []);
+
+  // Seek to the position corresponding to a pointer X coordinate on the bar
+  const seekFromClientX = useCallback((clientX: number) => {
+    const bar = progressBarRef.current;
+    if (!bar || duration <= 0) return;
+    const rect = bar.getBoundingClientRect();
+    const pct = Math.min(Math.max((clientX - rect.left) / rect.width, 0), 1);
+    seekTo(pct * duration);
+    setCurrentTime(pct * duration); // optimistic update
+  }, [duration]);
 
   if (!audioContext) return null;
 
@@ -37,18 +69,33 @@ export const AudioPlayerBar: React.FC<Props> = ({ onQueueToggle, queueOpen }) =>
     setVolume(pct);
   };
 
-  const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+  const handleVolumePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
     e.currentTarget.setPointerCapture(e.pointerId);
-    draggingRef.current = true;
+    draggingVolumeRef.current = true;
     setVolumeFromClientX(e.clientX);
   };
 
-  const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
-    if (draggingRef.current) setVolumeFromClientX(e.clientX);
+  const handleVolumePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (draggingVolumeRef.current) setVolumeFromClientX(e.clientX);
   };
 
-  const handlePointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
-    draggingRef.current = false;
+  const handleVolumePointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
+    draggingVolumeRef.current = false;
+    e.currentTarget.releasePointerCapture(e.pointerId);
+  };
+
+  const handleProgressPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    e.currentTarget.setPointerCapture(e.pointerId);
+    draggingProgressRef.current = true;
+    seekFromClientX(e.clientX);
+  };
+
+  const handleProgressPointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (draggingProgressRef.current) seekFromClientX(e.clientX);
+  };
+
+  const handleProgressPointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
+    draggingProgressRef.current = false;
     e.currentTarget.releasePointerCapture(e.pointerId);
   };
 
@@ -168,13 +215,36 @@ export const AudioPlayerBar: React.FC<Props> = ({ onQueueToggle, queueOpen }) =>
           </button>
         </div>
 
-        {/* Slider Timeline Duration Track */}
+        {/* Seekable progress bar */}
         <div className="w-full max-w-[420px] flex items-center gap-2">
-          <span className="text-[9px] text-[var(--tt)] select-none w-7 text-right" style={{ fontFamily: 'var(--fm)' }}>1:24</span>
-          <div className="flex-1 h-0.5 bg-[var(--s4)] rounded-full relative cursor-pointer group">
-            <div className="h-full w-[35%] bg-[var(--gold)] rounded-full absolute left-0 top-0 group-hover:bg-[var(--gold-b)] transition-colors"></div>
+          <span className="text-[9px] text-[var(--tt)] select-none w-7 text-right tabular-nums" style={{ fontFamily: 'var(--fm)' }}>
+            {fmt(currentTime)}
+          </span>
+
+          {/* Track */}
+          <div
+            ref={progressBarRef}
+            onPointerDown={handleProgressPointerDown}
+            onPointerMove={handleProgressPointerMove}
+            onPointerUp={handleProgressPointerUp}
+            className="flex-1 h-1 bg-[var(--s4)] rounded-full relative cursor-pointer group touch-none"
+            style={{ touchAction: 'none' }}
+          >
+            {/* Filled portion */}
+            <div
+              className="h-full bg-[var(--gold)] rounded-full absolute left-0 top-0 group-hover:bg-[var(--gold-b)] transition-colors pointer-events-none"
+              style={{ width: `${duration > 0 ? (currentTime / duration) * 100 : 0}%` }}
+            />
+            {/* Thumb — visible on hover or while dragging */}
+            <div
+              className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-3 h-3 rounded-full bg-[var(--tp)] shadow opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"
+              style={{ left: `${duration > 0 ? (currentTime / duration) * 100 : 0}%` }}
+            />
           </div>
-          <span className="text-[9px] text-[var(--tt)] select-none w-7 text-left" style={{ fontFamily: 'var(--fm)' }}>4:07</span>
+
+          <span className="text-[9px] text-[var(--tt)] select-none w-7 text-left tabular-nums" style={{ fontFamily: 'var(--fm)' }}>
+            {fmt(duration)}
+          </span>
         </div>
       </div>
 
@@ -198,9 +268,9 @@ export const AudioPlayerBar: React.FC<Props> = ({ onQueueToggle, queueOpen }) =>
           )}
         </button>
         <div
-          onPointerDown={handlePointerDown}
-          onPointerMove={handlePointerMove}
-          onPointerUp={handlePointerUp}
+          onPointerDown={handleVolumePointerDown}
+          onPointerMove={handleVolumePointerMove}
+          onPointerUp={handleVolumePointerUp}
           className="w-[72px] py-2 flex items-center cursor-pointer group touch-none"
         >
           <div ref={volumeBarRef} className="w-full h-0.5 bg-[var(--s4)] rounded-full relative">
