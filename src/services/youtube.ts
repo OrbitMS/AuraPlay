@@ -111,6 +111,36 @@ async function getStreamClient(): Promise<Innertube> {
 
 type FeedTrack = { id: string; name: string; artists: { name: string }[]; thumbnails: { url: string }[] };
 
+// Returns related tracks for auto-queue via YouTube Music's automix/radio feature.
+export async function getRelatedTracks(videoId: string): Promise<
+  { id: string; title: string; artist: string; thumbnail: string }[]
+> {
+  const client = await getClient();
+  try {
+    const panel = await client.music.getUpNext(videoId, true);
+    const results: { id: string; title: string; artist: string; thumbnail: string }[] = [];
+
+    for (const item of (panel as any).contents ?? []) {
+      if (item.type !== 'PlaylistPanelVideo') continue;
+      const id: string = item.video_id ?? '';
+      if (!id || id === videoId) continue;
+
+      const title = item.title?.toString?.() ?? 'Unknown';
+      const artist: string =
+        item.artists?.[0]?.name ?? (typeof item.author === 'string' ? item.author : '') ?? '';
+      const thumbArr: any[] = Array.isArray(item.thumbnail) ? item.thumbnail : [];
+      const thumbnail: string =
+        thumbArr[thumbArr.length - 1]?.url ?? thumbArr[0]?.url ?? '';
+
+      results.push({ id, title, artist, thumbnail });
+    }
+    return results;
+  } catch (err) {
+    console.warn('[autoqueue] getUpNext failed:', err);
+    return [];
+  }
+}
+
 export async function getHomeFeed(): Promise<{ title: string; tracks: FeedTrack[] }[]> {
   const client = await getClient();
   const feed = await client.music.getHomeFeed();

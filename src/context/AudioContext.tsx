@@ -7,6 +7,7 @@ import {
   subscribeToAudioStatus,
   initAudioPlayer,
   getAudioStreamUrl,
+  getRelatedTracks,
 } from '../services/youtube';
 import {
   downloadTrackOffline,
@@ -48,6 +49,9 @@ interface AudioContextType {
   removeDownload: (id: string) => Promise<void>;
   reorderQueue: (fromIndex: number, toIndex: number) => void;
   removeFromQueue: (index: number) => void;
+  autoQueue: boolean;
+  autoQueueStart: number | null;
+  toggleAutoQueue: () => void;
 }
 
 export const AudioContext = createContext<AudioContextType | undefined>(undefined);
@@ -61,6 +65,9 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [volume, setVolumeState] = useState<number>(70); // Initialize standard fallback volume at 70%
   const [downloadedIds, setDownloadedIds] = useState<Set<string>>(new Set());
   const [downloadingIds, setDownloadingIds] = useState<Set<string>>(new Set());
+  const [autoQueue, setAutoQueue] = useState(true);
+  // Index in `queue` where auto-suggested tracks begin (null = none appended yet)
+  const [autoQueueStart, setAutoQueueStart] = useState<number | null>(null);
   const { push: pushHistory } = useHistory();
 
   const currentTrack = currentIndex >= 0 && currentIndex < queue.length ? queue[currentIndex] : null;
@@ -68,6 +75,8 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   // Counts tracks skipped due to playback errors so we stop instead of looping
   // forever when an entire queue is unplayable (e.g. embed-restricted videos).
   const skipCountRef = useRef(0);
+  // Prevents concurrent auto-queue fetches.
+  const isFetchingAutoRef = useRef(false);
 
   useEffect(() => {
     initAudioPlayer();
@@ -75,6 +84,35 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       setDownloadedIds(new Set(tracks.map((t) => t.id)));
     });
   }, []);
+
+  // Auto-queue: when the current track is the last in the queue, fetch related
+  // tracks and append them so playback continues seamlessly.
+  useEffect(() => {
+    if (!autoQueue) return;
+    if (currentIndex < 0 || queue.length === 0) return;
+    if (isFetchingAutoRef.current) return;
+
+    // Trigger when we're on the last track in the queue
+    const isLastTrack = currentIndex === queue.length - 1;
+    if (!isLastTrack) return;
+
+    const trackId = queue[currentIndex]?.id;
+    if (!trackId) return;
+
+    isFetchingAutoRef.current = true;
+    getRelatedTracks(trackId)
+      .then((related) => {
+        if (related.length === 0) return;
+        setQueue((prev) => {
+          // Only append if we're still on the same last track
+          if (prev[currentIndex]?.id !== trackId) return prev;
+          setAutoQueueStart(prev.length);
+          return [...prev, ...related.slice(0, 5)];
+        });
+      })
+      .finally(() => { isFetchingAutoRef.current = false; });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentIndex, queue.length, autoQueue]);
 
   const downloadTrack = useCallback(async (track: Track) => {
     if (downloadingIds.has(track.id) || downloadedIds.has(track.id)) return;
@@ -137,8 +175,13 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     };
   }, [currentIndex, queue, repeatMode, isShuffling, currentTrack]);
 
+  const toggleAutoQueue = () => setAutoQueue(v => !v);
+
   const playTrack = (track: Track, completePlaylist?: Track[]) => {
     skipCountRef.current = 0;
+    // A manual play always resets the auto-queue bookmark
+    setAutoQueueStart(null);
+    isFetchingAutoRef.current = false;
     if (completePlaylist && completePlaylist.length > 0) {
       setQueue(completePlaylist);
       const idx = completePlaylist.findIndex(t => t.id === track.id);
@@ -273,6 +316,9 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       removeDownload,
       reorderQueue,
       removeFromQueue,
+      autoQueue,
+      autoQueueStart,
+      toggleAutoQueue,
     }}>
       {children}
     </AudioContext.Provider>
