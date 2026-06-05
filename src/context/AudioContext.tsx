@@ -38,6 +38,7 @@ interface AudioContextType {
   cycleRepeat: () => void;
   setShuffling: (val: boolean) => void;
   playTrack: (track: Track, completePlaylist?: Track[]) => void;
+  playAtIndex: (index: number) => void;
   togglePlay: () => void;
   nextTrack: () => void;
   prevTrack: () => void;
@@ -45,6 +46,8 @@ interface AudioContextType {
   setVolume: (volume: number) => void;
   downloadTrack: (track: Track) => Promise<void>;
   removeDownload: (id: string) => Promise<void>;
+  reorderQueue: (fromIndex: number, toIndex: number) => void;
+  removeFromQueue: (index: number) => void;
 }
 
 export const AudioContext = createContext<AudioContextType | undefined>(undefined);
@@ -189,8 +192,46 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   const prevTrack = () => {
     if (queue.length === 0) return;
-    playIndex(currentIndex > 0 ? currentIndex - 1 : queue.length - 1); // Wrap to end
+    playIndex(currentIndex > 0 ? currentIndex - 1 : queue.length - 1);
   };
+
+  const playAtIndex = (index: number) => {
+    if (index < 0 || index >= queue.length) return;
+    playIndex(index);
+  };
+
+  const reorderQueue = useCallback((fromIndex: number, toIndex: number) => {
+    if (fromIndex === toIndex) return;
+    setQueue(prev => {
+      const next = [...prev];
+      const [moved] = next.splice(fromIndex, 1);
+      next.splice(toIndex, 0, moved);
+      return next;
+    });
+    // Keep currentIndex pointing at the same track after reorder
+    setCurrentIndex(prev => {
+      if (prev === fromIndex) return toIndex;
+      if (fromIndex < prev && toIndex >= prev) return prev - 1;
+      if (fromIndex > prev && toIndex <= prev) return prev + 1;
+      return prev;
+    });
+  }, []);
+
+  const removeFromQueue = useCallback((index: number) => {
+    const isCurrentTrack = index === currentIndex;
+    const newQueue = queue.filter((_, i) => i !== index);
+
+    if (isCurrentTrack) {
+      // Stop playback and reset if the current track is removed
+      nativePauseTrack().catch(() => {});
+      setIsPlaying(false);
+      setQueue(newQueue);
+      setCurrentIndex(-1);
+    } else {
+      setQueue(newQueue);
+      setCurrentIndex(prev => (index < prev ? prev - 1 : prev));
+    }
+  }, [queue, currentIndex]);
 
   const stopTrack = () => {
     nativePauseTrack().catch(() => {});
@@ -222,6 +263,7 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       cycleRepeat,
       setShuffling: setIsShuffling,
       playTrack,
+      playAtIndex,
       togglePlay,
       nextTrack,
       prevTrack,
@@ -229,6 +271,8 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       setVolume,
       downloadTrack,
       removeDownload,
+      reorderQueue,
+      removeFromQueue,
     }}>
       {children}
     </AudioContext.Provider>
