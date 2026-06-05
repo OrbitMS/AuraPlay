@@ -1,9 +1,10 @@
-import React, { useContext, useRef, useState, useEffect, useCallback } from 'react';
+import React, { useContext, useRef, useState, useEffect, useCallback, useMemo } from 'react';
 import { AudioContext } from '../context/AudioContext';
 import { subscribeToProgress, seekTo } from '../services/youtube';
+import { getLyrics, activeLineIndex, type LyricsResult } from '../services/lyrics';
 import { Visualizer } from './Visualizer';
 import { useLikes } from '../hooks/useLikes';
-import { ChevronDown, Heart, Shuffle, SkipBack, SkipForward, Play, Pause, Repeat, Repeat1 } from 'lucide-react';
+import { ChevronDown, Heart, Shuffle, SkipBack, SkipForward, Play, Pause, Repeat, Repeat1, Mic2, Disc3, Loader } from 'lucide-react';
 
 interface Props {
   onClose: () => void;
@@ -24,7 +25,43 @@ export const NowPlayingScreen: React.FC<Props> = ({ onClose }) => {
   const [duration, setDuration] = useState(0);
   const { toggle: toggleLike, isLiked } = useLikes();
 
+  // ── Lyrics ──
+  const [showLyrics, setShowLyrics] = useState(false);
+  const [lyrics, setLyrics] = useState<LyricsResult | null>(null);
+  const [lyricsLoading, setLyricsLoading] = useState(false);
+  const activeLineRef = useRef<HTMLParagraphElement | null>(null);
+
+  const trackId = ctx?.currentTrack?.id;
+  const trackTitle = ctx?.currentTrack?.title;
+  const trackArtist = ctx?.currentTrack?.artist;
+  const isRadio = !!ctx?.radioStation;
+
   useEffect(() => subscribeToProgress((ct, dur) => { setCurrentTime(ct); setDuration(dur); }), []);
+
+  // Fetch lyrics when the track changes (skip radio)
+  useEffect(() => {
+    if (isRadio || !trackId || !trackTitle) { setLyrics(null); return; }
+    let cancelled = false;
+    setLyricsLoading(true);
+    setLyrics(null);
+    getLyrics(trackTitle, trackArtist || '')
+      .then(r => { if (!cancelled) setLyrics(r); })
+      .finally(() => { if (!cancelled) setLyricsLoading(false); });
+    return () => { cancelled = true; };
+  }, [trackId, isRadio, trackTitle, trackArtist]);
+
+  const synced = lyrics?.synced ?? null;
+  const activeIdx = useMemo(
+    () => (synced ? activeLineIndex(synced, currentTime) : -1),
+    [synced, currentTime],
+  );
+
+  // Auto-scroll the active synced line into view
+  useEffect(() => {
+    if (showLyrics && activeIdx >= 0) {
+      activeLineRef.current?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    }
+  }, [activeIdx, showLyrics]);
 
   const seekFromX = useCallback((clientX: number) => {
     const bar = progressBarRef.current;
@@ -79,36 +116,83 @@ export const NowPlayingScreen: React.FC<Props> = ({ onClose }) => {
           <ChevronDown size={20} />
         </button>
         <span className="text-[10px] tracking-[0.18em] uppercase" style={{ color: 'var(--tt)', fontFamily: 'var(--fm)' }}>
-          {isLive ? 'Now Streaming' : 'Now Playing'}
+          {isLive ? 'Now Streaming' : (showLyrics ? 'Lyrics' : 'Now Playing')}
         </span>
-        <div className="w-10" />
+        {/* Lyrics / artwork toggle (hidden for radio) */}
+        {!isLive ? (
+          <button onClick={() => setShowLyrics(v => !v)} title={showLyrics ? 'Show artwork' : 'Show lyrics'}
+            className="w-10 h-10 flex items-center justify-center rounded-full transition-colors"
+            style={{
+              background: showLyrics ? 'rgba(201,168,76,0.16)' : 'rgba(255,255,255,0.06)',
+              border: 'none', cursor: 'pointer', color: showLyrics ? 'var(--gold)' : 'var(--ts)',
+            }}>
+            {showLyrics ? <Disc3 size={18} /> : <Mic2 size={18} />}
+          </button>
+        ) : <div className="w-10" />}
       </div>
 
       {/* Main */}
       <div className="relative flex-1 flex flex-col items-center justify-center px-8 min-h-0">
-        {/* Artwork */}
-        <div className="flex-shrink-0 mb-8 relative"
-          style={{
-            width: 'min(42vh, 340px)', height: 'min(42vh, 340px)',
-            borderRadius: isLive ? 18 : '50%',
-            overflow: 'hidden',
-            border: '1px solid rgba(201,168,76,0.25)',
-            boxShadow: '0 24px 80px rgba(0,0,0,0.6), 0 0 60px rgba(201,168,76,0.12)',
-          }}>
-          {art ? (
-            <img src={art} alt="" className={`w-full h-full object-cover ${!isLive && isPlaying ? 'animate-spin-slow' : ''}`} />
-          ) : (
-            <div className="w-full h-full flex items-center justify-center" style={{ background: 'var(--s2)' }}>
-              <svg viewBox="0 0 24 24" fill="none" stroke="var(--tt)" strokeWidth="1" className="w-20 h-20">
-                <circle cx="9" cy="18" r="3"/><circle cx="18" cy="15" r="3"/><line x1="12" y1="18" x2="12" y2="5"/><polyline points="12 5 21 3 21 15"/>
-              </svg>
-            </div>
-          )}
-          {!isLive && (
-            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full"
-              style={{ width: 26, height: 26, background: 'var(--obsidian)', border: '2px solid rgba(201,168,76,0.4)' }} />
-          )}
-        </div>
+        {showLyrics && !isLive ? (
+          /* ── Lyrics panel ── */
+          <div className="w-full flex-1 min-h-0 overflow-y-auto scrollbar-hide py-10 text-center"
+            style={{ maxWidth: 640, maskImage: 'linear-gradient(180deg, transparent, black 12%, black 88%, transparent)', WebkitMaskImage: 'linear-gradient(180deg, transparent, black 12%, black 88%, transparent)' }}>
+            {lyricsLoading ? (
+              <div className="flex items-center justify-center h-full"><Loader size={22} className="animate-spin text-[var(--gold)]" /></div>
+            ) : synced ? (
+              synced.map((line, i) => {
+                const active = i === activeIdx;
+                return (
+                  <p key={i}
+                    ref={active ? activeLineRef : null}
+                    onClick={() => { seekTo(line.time); setCurrentTime(line.time); }}
+                    className="cursor-pointer transition-all duration-200 leading-snug"
+                    style={{
+                      fontSize: active ? 24 : 19,
+                      fontWeight: active ? 700 : 500,
+                      color: active ? 'var(--tp)' : 'rgba(138,135,148,0.5)',
+                      padding: '8px 0',
+                      letterSpacing: '-0.01em',
+                    }}>
+                    {line.text || '♪'}
+                  </p>
+                );
+              })
+            ) : lyrics?.plain ? (
+              <p className="whitespace-pre-wrap leading-relaxed text-[16px]" style={{ color: 'var(--ts)' }}>{lyrics.plain}</p>
+            ) : (
+              <div className="flex flex-col items-center justify-center h-full gap-2 text-center">
+                <Mic2 size={30} className="text-[var(--tt)] opacity-30" />
+                <p className="text-[13px]" style={{ color: 'var(--tt)' }}>No lyrics found</p>
+                <p className="text-[11px] opacity-60" style={{ color: 'var(--tt)', fontFamily: 'var(--fm)' }}>for this track</p>
+              </div>
+            )}
+          </div>
+        ) : (
+          /* ── Artwork ── */
+          <div className="flex-shrink-0 mb-8 relative"
+            style={{
+              width: 'min(42vh, 340px)', height: 'min(42vh, 340px)',
+              borderRadius: isLive ? 18 : '50%',
+              overflow: 'hidden',
+              border: '1px solid rgba(201,168,76,0.25)',
+              boxShadow: '0 24px 80px rgba(0,0,0,0.6), 0 0 60px rgba(201,168,76,0.12)',
+            }}>
+            {art ? (
+              <img src={art} alt="" className={`w-full h-full object-cover ${!isLive && isPlaying ? 'animate-spin-slow' : ''}`} />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center" style={{ background: 'var(--s2)' }}>
+                <svg viewBox="0 0 24 24" fill="none" stroke="var(--tt)" strokeWidth="1" className="w-20 h-20">
+                  <circle cx="9" cy="18" r="3"/><circle cx="18" cy="15" r="3"/><line x1="12" y1="18" x2="12" y2="5"/><polyline points="12 5 21 3 21 15"/>
+                </svg>
+              </div>
+            )}
+            {!isLive && (
+              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full"
+                style={{ width: 26, height: 26, background: 'var(--obsidian)', border: '2px solid rgba(201,168,76,0.4)' }} />
+            )}
+          </div>
+        )}
 
         {/* Title block */}
         <div className="text-center max-w-[560px] w-full mb-7">
