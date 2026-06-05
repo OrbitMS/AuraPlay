@@ -12,6 +12,7 @@ const DownloadedView = lazy(() => import('./views/DownloadedView').then(m => ({ 
 import { QueueSidebar } from './components/QueueSidebar';
 import { NowPlayingScreen } from './components/NowPlayingScreen';
 import { ErrorBoundary } from './components/ErrorBoundary';
+import { UpdateBanner } from './components/UpdateBanner';
 import { useSettings } from './hooks/useSettings';
 import { setAudioQuality } from './services/youtube';
 import './App.css';
@@ -121,6 +122,9 @@ function App() {
 
         {/* Full-screen Now Playing */}
         {showNowPlaying && <NowPlayingScreen onClose={() => setShowNowPlaying(false)} />}
+
+        {/* Self-update notification */}
+        <UpdateBanner />
       </div>
     </AudioProvider>
   );
