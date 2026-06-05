@@ -522,6 +522,38 @@ export async function getAudioStreamUrl(videoId: string): Promise<string> {
   return promise;
 }
 
+// Selects the best audio-only format for the requested quality tier.
+// IMPORTANT: youtubei.js' chooseFormat() defaults to the mp4 container, which
+// silently excludes Opus/WebM — capping "high" at AAC ~128kbps. We pick from
+// adaptive_formats manually so Opus (itag 251, ~160kbps) is selectable.
+function pickAudioFormat(info: any, quality: AudioQuality): any | null {
+  const fmts: any[] = info?.streaming_data?.adaptive_formats ?? [];
+  // Audio-only formats (exclude muxed video+audio, which are lower audio quality)
+  let audio = fmts.filter(f => {
+    const mime = String(f.mime_type ?? '');
+    const isAudio = mime.startsWith('audio/') || (f.has_audio && !f.has_video);
+    return isAudio && (f.url || f.signature_cipher || f.cipher);
+  });
+  if (audio.length === 0) {
+    // Fallback to youtubei's chooser, but force any-container so Opus counts
+    try { return info.chooseFormat({ type: 'audio', quality: 'best', format: 'any' }); }
+    catch { return null; }
+  }
+
+  // Sort by bitrate descending; on near-ties prefer Opus (better quality/bitrate)
+  const br = (f: any) => f.bitrate ?? f.average_bitrate ?? 0;
+  const isOpus = (f: any) => String(f.mime_type ?? '').includes('opus');
+  audio.sort((a, b) => {
+    const d = br(b) - br(a);
+    if (Math.abs(d) > 2000) return d;            // clear bitrate winner
+    return (isOpus(b) ? 1 : 0) - (isOpus(a) ? 1 : 0); // tie → Opus wins
+  });
+
+  if (quality === 'high')   return audio[0];                       // absolute best
+  if (quality === 'low')    return audio[audio.length - 1];        // smallest
+  return audio[Math.floor((audio.length - 1) / 2)] ?? audio[0];    // medium = middle tier
+}
+
 // Runs one full pass over all clients. Returns a URL or null if none worked.
 async function tryResolvePass(videoId: string): Promise<{ url: string | null; lastReason: string }> {
   const client = await getStreamClient();
@@ -541,20 +573,12 @@ async function tryResolvePass(videoId: string): Promise<{ url: string | null; la
         lastReason = `${c}: ${ps?.status ?? 'NO_DATA'} ${ps?.reason ?? ''}`.trim();
         continue;
       }
-      // Quality mapping:
-      //   high   → highest bitrate (quality:'best', any codec)
-      //   medium → prefer opus efficiency tier, fall back to mp4a best
-      //   low    → lowest bitrate (quality:'bestefficiency')
-      const formatOpts =
-        audioQualityPref === 'low'
-          ? { type: 'audio' as const, quality: 'bestefficiency' as const, format: 'any' as const }
-          : audioQualityPref === 'medium'
-          ? { type: 'audio' as const, quality: 'bestefficiency' as const }
-          : { type: 'audio' as const, quality: 'best' as const };
-      const format = info.chooseFormat(formatOpts);
+      const format = pickAudioFormat(info, audioQualityPref);
+      if (!format) { lastReason = `${c}: no audio format`; continue; }
       const url = await format.decipher(client.session.player);
       if (url) {
-        console.log(`[stream] ${c}: resolved (quality=${audioQualityPref})`);
+        const f = format as any;
+        console.log(`[stream] ${c}: resolved itag=${f.itag} bitrate=${f.bitrate} codec=${f.mime_type?.match(/codecs="([^"]+)"/)?.[1] ?? '?'} (quality=${audioQualityPref})`);
         return { url, lastReason };
       }
       lastReason = `${c}: empty URL after decipher`;
