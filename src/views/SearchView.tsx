@@ -4,6 +4,7 @@ import { AudioContext, Track } from '../context/AudioContext';
 import { useLikes } from '../hooks/useLikes';
 import { HomeContent } from '../components/HomeContent';
 import { AddToPlaylistButton } from '../components/AddToPlaylistButton';
+import { safeImageUrl } from '../lib/safeUrl';
 import { Search, Download, CheckCircle, Loader, Heart, Minus, Plus } from 'lucide-react';
 
 export const SearchView: React.FC = () => {
@@ -148,9 +149,9 @@ export const SearchView: React.FC = () => {
       {hasSearched && (
       <>
       <div className="grid grid-cols-[30px_1fr_160px_32px_32px_32px] gap-x-[14px] px-[10px] pb-[8px] border-b border-[var(--bd)] mb-[2px]">
-        <div className="text-[8px] text-[var(--tt)] tracking-[0.1em] uppercase" style={{ fontFamily: 'var(--fm)' }}>#</div>
-        <div className="text-[8px] text-[var(--tt)] tracking-[0.1em] uppercase" style={{ fontFamily: 'var(--fm)' }}>Track</div>
-        <div className="text-[8px] text-[var(--tt)] tracking-[0.1em] uppercase" style={{ fontFamily: 'var(--fm)' }}>Artist</div>
+        <div className="text-[10px] text-[var(--ts)] tracking-[0.12em] uppercase font-semibold" style={{ fontFamily: 'var(--fm)' }}>#</div>
+        <div className="text-[10px] text-[var(--ts)] tracking-[0.12em] uppercase font-semibold" style={{ fontFamily: 'var(--fm)' }}>Track</div>
+        <div className="text-[10px] text-[var(--ts)] tracking-[0.12em] uppercase font-semibold" style={{ fontFamily: 'var(--fm)' }}>Artist</div>
         <div></div>
         <div></div>
         <div></div>
@@ -179,7 +180,7 @@ export const SearchView: React.FC = () => {
                 )}
               </span>
               <div className="flex items-center gap-2.5 overflow-hidden">
-                <img src={song.thumbnails?.[0]?.url} className={`w-9 h-9 rounded-[4px] object-cover bg-[var(--s2)] flex-shrink-0 border ${active ? 'border-[rgba(201,168,76,0.3)]' : 'border-[var(--bd)]'}`} />
+                <img src={safeImageUrl(song.thumbnails?.[0]?.url)} className={`w-9 h-9 rounded-[4px] object-cover bg-[var(--s2)] flex-shrink-0 border ${active ? 'border-[rgba(201,168,76,0.3)]' : 'border-[var(--bd)]'}`} />
                 <span className={`text-[12px] font-medium tracking-[0.01em] truncate ${active ? 'text-[var(--gold)]' : 'text-[var(--tp)]'}`}>{song.name}</span>
               </div>
               <span className="text-[10px] text-[var(--ts)] truncate tracking-[0.02em]" style={{ fontFamily: 'var(--fm)' }}>{song.artists?.[0]?.name}</span>

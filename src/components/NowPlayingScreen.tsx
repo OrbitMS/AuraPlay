@@ -3,6 +3,7 @@ import { AudioContext } from '../context/AudioContext';
 import { subscribeToProgress, seekTo } from '../services/youtube';
 import { getLyrics, activeLineIndex, type LyricsResult } from '../services/lyrics';
 import { Visualizer } from './Visualizer';
+import { safeImageUrl } from '../lib/safeUrl';
 import { useLikes } from '../hooks/useLikes';
 import { ChevronDown, Heart, Shuffle, SkipBack, SkipForward, Play, Pause, Repeat, Repeat1, Mic2, Disc3, Loader } from 'lucide-react';
 
@@ -88,7 +89,7 @@ export const NowPlayingScreen: React.FC<Props> = ({ onClose }) => {
   const isLive = radioStation !== null;
   const title  = radioStation?.name  ?? currentTrack?.title  ?? 'Nothing Playing';
   const artist = radioStation ? (isPlaying ? 'Live Radio' : 'Radio') : (currentTrack?.artist || 'Unknown Artist');
-  const art    = radioStation?.favicon ?? currentTrack?.thumbnail ?? '';
+  const art    = safeImageUrl(radioStation?.favicon ?? currentTrack?.thumbnail ?? '');
   const fillPct = duration > 0 ? (currentTime / duration) * 100 : 0;
   const liked  = currentTrack ? isLiked(currentTrack.id) : false;
 

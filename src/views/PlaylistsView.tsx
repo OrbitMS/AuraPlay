@@ -4,6 +4,7 @@ import {
   usePlaylists, deletePlaylist, renamePlaylist, removeTrackFromPlaylist, createPlaylist,
 } from '../hooks/usePlaylists';
 import { ImportPlaylistModal } from '../components/ImportPlaylistModal';
+import { safeImageUrl } from '../lib/safeUrl';
 import { ListMusic, Plus, Download, Trash2, ChevronLeft, Play, Pencil } from 'lucide-react';
 
 export const PlaylistsView: React.FC = () => {
@@ -69,7 +70,7 @@ export const PlaylistsView: React.FC = () => {
                   <span className="text-[10px] text-[var(--tt)] text-center" style={{ fontFamily: 'var(--fm)' }}>{String(idx + 1).padStart(2, '0')}</span>
                   <div className="flex items-center gap-2.5 overflow-hidden">
                     {track.thumbnail
-                      ? <img src={track.thumbnail} className={`w-9 h-9 rounded-[4px] object-cover bg-[var(--s2)] flex-shrink-0 border ${active ? 'border-[rgba(201,168,76,0.3)]' : 'border-[var(--bd)]'}`} />
+                      ? <img src={safeImageUrl(track.thumbnail)} className={`w-9 h-9 rounded-[4px] object-cover bg-[var(--s2)] flex-shrink-0 border ${active ? 'border-[rgba(201,168,76,0.3)]' : 'border-[var(--bd)]'}`} />
                       : <div className="w-9 h-9 rounded-[4px] bg-[var(--s2)] flex-shrink-0 border border-[var(--bd)]" />}
                     <span className={`text-[12px] font-medium truncate ${active ? 'text-[var(--gold)]' : 'text-[var(--tp)]'}`}>{track.title}</span>
                   </div>
@@ -124,13 +125,13 @@ export const PlaylistsView: React.FC = () => {
         <div className="grid gap-3 mt-7" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))' }}>
           {playlists.map(p => (
             <div key={p.id} onClick={() => setSelectedId(p.id)}
-              className="cursor-pointer rounded-[10px] p-4 transition-colors group"
+              className="lift cursor-pointer rounded-[12px] p-4 group"
               style={{ background: 'var(--s1)', border: '1px solid var(--bd)' }}
               onMouseEnter={e => (e.currentTarget.style.background = 'var(--s2)')}
               onMouseLeave={e => (e.currentTarget.style.background = 'var(--s1)')}>
               <div className="w-full aspect-square rounded-[8px] mb-3 flex items-center justify-center overflow-hidden" style={{ background: 'var(--s3)' }}>
                 {p.tracks[0]?.thumbnail
-                  ? <img src={p.tracks[0].thumbnail} className="w-full h-full object-cover" />
+                  ? <img src={safeImageUrl(p.tracks[0].thumbnail)} className="w-full h-full object-cover" />
                   : <ListMusic size={32} className="text-[var(--tt)] opacity-40" />}
               </div>
               <p className="text-[13px] font-semibold truncate" style={{ color: 'var(--tp)' }}>{p.name}</p>

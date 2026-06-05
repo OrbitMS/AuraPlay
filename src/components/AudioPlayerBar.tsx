@@ -2,6 +2,7 @@ import React, { useContext, useRef, useState, useEffect, useCallback } from 'rea
 import { AudioContext } from '../context/AudioContext';
 import { subscribeToProgress, seekTo } from '../services/youtube';
 import { Visualizer } from './Visualizer';
+import { safeImageUrl } from '../lib/safeUrl';
 import { ChevronUp, ListMusic } from 'lucide-react';
 
 interface Props {
@@ -133,7 +134,7 @@ export const AudioPlayerBar: React.FC<Props> = ({ onQueueToggle, queueOpen, onEx
             <div className="flex-shrink-0 rounded-[10px] overflow-hidden flex items-center justify-center"
               style={{ width: 62, height: 62, background: 'var(--s2)', border: '1.5px solid rgba(201,168,76,0.2)' }}>
               {radioStation.favicon
-                ? <img src={radioStation.favicon} alt="" className="w-full h-full object-cover" onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+                ? <img src={safeImageUrl(radioStation.favicon)} alt="" className="w-full h-full object-cover" onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />
                 : <svg viewBox="0 0 24 24" fill="none" stroke="var(--tt)" strokeWidth="1.5" className="w-6 h-6"><path d="M3 18v-6a9 9 0 0 1 18 0v6"/><path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z"/></svg>
               }
             </div>
@@ -153,7 +154,7 @@ export const AudioPlayerBar: React.FC<Props> = ({ onQueueToggle, queueOpen, onEx
             <div className="flex-shrink-0 rounded-full relative overflow-hidden"
               style={{ width: 62, height: 62, border: '2px solid rgba(201,168,76,0.3)', boxShadow: isPlaying ? '0 0 20px rgba(201,168,76,0.15)' : 'none', transition: 'box-shadow 0.4s' }}>
               <img
-                src={currentTrack.thumbnail || ''}
+                src={safeImageUrl(currentTrack.thumbnail)}
                 alt=""
                 className={`w-full h-full object-cover rounded-full ${isPlaying ? 'animate-spin-slow' : ''}`}
               />

@@ -32,16 +32,16 @@
   --s2: #1a1a22;
   --s3: #21212c;
   --s4: #2a2a38;
-  --bd: rgba(255, 255, 255, 0.04);
-  --bs: rgba(255, 255, 255, 0.08);
-  --bm: rgba(255, 255, 255, 0.12);
+  --bd: rgba(255, 255, 255, 0.07);
+  --bs: rgba(255, 255, 255, 0.11);
+  --bm: rgba(255, 255, 255, 0.16);
   --gold: #c9a84c;
   --gold-b: #e8c76a;
   --gold-d: rgba(201, 168, 76, 0.15);
-  --gold-g: rgba(201, 168, 76, 0.07);
-  --tp: #f0ede8;
-  --ts: #8a8794;
-  --tt: #4a4856;
+  --gold-g: rgba(201, 168, 76, 0.10);
+  --tp: #f4f1ec;
+  --ts: #b0adba;
+  --tt: #807d8c;
   --fd: 'DM Serif Display', serif;
   --fu: 'Syne', sans-serif;
   --fm: 'DM Mono', monospace;
@@ -99,6 +99,13 @@ button:focus-visible { outline: 1.5px solid rgba(201,168,76,0.5); outline-offset
    contain-intrinsic-size reserves space so the scrollbar stays stable. */
 .cv-row  { content-visibility: auto; contain-intrinsic-size: auto 52px; }
 .cv-card { content-visibility: auto; contain-intrinsic-size: auto 170px; }
+
+/* Card hover lift — subtle elevation for grid items */
+.lift { transition: transform .16s ease, box-shadow .16s ease, background .16s ease, border-color .16s ease; }
+.lift:hover { transform: translateY(-3px); box-shadow: 0 10px 28px rgba(0,0,0,0.4); }
+
+/* Track-row hover accent (used across list views) */
+.row-hover { transition: background .12s ease; }
 
 @keyframes slide-in-right {
   from { transform: translateX(100%); opacity: 0; }

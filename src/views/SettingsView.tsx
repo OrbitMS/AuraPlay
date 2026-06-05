@@ -2,7 +2,8 @@ import React, { useState } from 'react';
 import { type AudioQuality } from '../hooks/useSettings';
 import { setAudioQuality } from '../services/youtube';
 import { connectSpotify, disconnectSpotify, isSpotifyConnected, getClientId } from '../services/spotifyAuth';
-import { Music2, Check, Loader } from 'lucide-react';
+import { getJamendoClientId, setJamendoClientId } from '../services/jamendo';
+import { Music2, Check, Loader, Library } from 'lucide-react';
 
 interface Props {
   quality: AudioQuality;
@@ -105,7 +106,35 @@ export const SettingsView: React.FC<Props> = ({ quality, onQualityChange }) => {
       </div>
 
       <SpotifySection />
+      <JamendoSection />
     </div>
+  );
+};
+
+/* ── Jamendo API key (for the Jamendo library) ── */
+const JamendoSection: React.FC = () => {
+  const [id, setId] = useState(getJamendoClientId());
+  const [saved, setSaved] = useState(false);
+  const save = () => { setJamendoClientId(id); setSaved(true); setTimeout(() => setSaved(false), 1500); };
+
+  return (
+    <section className="mb-8">
+      <h2 className="text-[13px] font-semibold text-[var(--tp)] mb-1 tracking-[0.01em] flex items-center gap-2">
+        <Library size={15} className="text-[var(--gold)]" /> Jamendo
+      </h2>
+      <p className="text-[11px] text-[var(--ts)] mb-4 leading-relaxed" style={{ fontFamily: 'var(--fm)' }}>
+        Paste a free Client ID from <span style={{ color: 'var(--gold)' }}>devportal.jamendo.com</span> to browse ~600k Creative-Commons tracks.
+      </p>
+      <div className="flex gap-2">
+        <input value={id} onChange={e => setId(e.target.value)} placeholder="Jamendo Client ID"
+          className="flex-1 rounded-[8px] px-3 py-2.5 text-[12px] outline-none"
+          style={{ background: 'var(--s1)', border: '1px solid var(--bs)', color: 'var(--tp)', fontFamily: 'var(--fm)' }} />
+        <button onClick={save} className="flex items-center gap-2 px-5 py-2.5 rounded-[7px] text-[11px] font-bold uppercase tracking-[0.06em]"
+          style={{ background: 'var(--gold)', color: 'var(--obsidian)', border: 'none', cursor: 'pointer' }}>
+          {saved ? <Check size={13} /> : null} {saved ? 'Saved' : 'Save'}
+        </button>
+      </div>
+    </section>
   );
 };
 

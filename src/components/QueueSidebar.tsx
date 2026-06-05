@@ -1,6 +1,7 @@
 import React, { useContext, useRef, useState } from 'react';
 import { AudioContext } from '../context/AudioContext';
 import { X, ListMusic, GripVertical, Trash2, Infinity } from 'lucide-react';
+import { safeImageUrl } from '../lib/safeUrl';
 
 interface Props {
   onClose: () => void;
@@ -275,7 +276,7 @@ const QueueRow: React.FC<RowProps> = ({
     {/* Thumbnail */}
     {track.thumbnail ? (
       <img
-        src={track.thumbnail}
+        src={safeImageUrl(track.thumbnail)}
         alt=""
         className={`w-8 h-8 rounded-[4px] object-cover flex-shrink-0 border ${isActive ? 'border-[rgba(201,168,76,0.3)]' : 'border-[var(--bd)]'}`}
       />
