@@ -10,11 +10,12 @@ import {
   getRelatedTracks,
   isUnplayable,
   playDirectStream,
+  prefetchStreamUrl,
 } from '../services/youtube';
+import { listDownloaded as listDownloadedTracks, type OfflineTrack } from '../services/offline';
 import type { RadioStation } from '../services/radio';
 import {
   downloadTrackOffline,
-  listDownloaded,
   deleteDownload,
 } from '../services/offline';
 import { useHistory } from '../hooks/useHistory';
@@ -57,6 +58,8 @@ interface AudioContextType {
   toggleAutoQueue: () => void;
   radioStation: RadioStation | null;
   playStation: (station: RadioStation) => void;
+  downloaded: OfflineTrack[];
+  refreshDownloaded: () => void;
 }
 
 export type { RadioStation };
@@ -75,6 +78,7 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [autoQueue, setAutoQueue] = useState(true);
   const [autoQueueStart, setAutoQueueStart] = useState<number | null>(null);
   const [radioStation, setRadioStation] = useState<RadioStation | null>(null);
+  const [downloaded, setDownloaded] = useState<OfflineTrack[]>([]);
   const { push: pushHistory } = useHistory();
 
   const currentTrack = currentIndex >= 0 && currentIndex < queue.length ? queue[currentIndex] : null;
@@ -85,12 +89,26 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   // Prevents concurrent auto-queue fetches.
   const isFetchingAutoRef = useRef(false);
 
+  const refreshDownloaded = useCallback(() => {
+    listDownloadedTracks().then((tracks) => {
+      setDownloaded(tracks);
+      setDownloadedIds(new Set(tracks.map((t) => t.id)));
+    }).catch(() => {});
+  }, []);
+
   useEffect(() => {
     initAudioPlayer();
-    listDownloaded().then((tracks) => {
-      setDownloadedIds(new Set(tracks.map((t) => t.id)));
-    });
-  }, []);
+    refreshDownloaded();
+  }, [refreshDownloaded]);
+
+  // Prefetch the upcoming track's stream URL as soon as the current one is set,
+  // so clicking "next" plays instantly instead of waiting on resolution.
+  useEffect(() => {
+    if (radioStation || queue.length === 0 || currentIndex < 0) return;
+    const nextIdx = currentIndex + 1 < queue.length ? currentIndex + 1 : 0;
+    const nextId = queue[nextIdx]?.id;
+    if (nextId && nextId !== queue[currentIndex]?.id) prefetchStreamUrl(nextId);
+  }, [currentIndex, queue, radioStation]);
 
   // Auto-queue: when the current track is the last in the queue, fetch related
   // tracks and append them so playback continues seamlessly.
@@ -128,6 +146,8 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       const url = await getAudioStreamUrl(track.id);
       await downloadTrackOffline(track.id, url, track.title, track.artist, track.thumbnail);
       setDownloadedIds((prev) => new Set(prev).add(track.id));
+      setDownloaded((prev) => prev.some(t => t.id === track.id) ? prev
+        : [...prev, { id: track.id, title: track.title, artist: track.artist, thumbnail: track.thumbnail }]);
     } catch (err) {
       console.error('Download failed:', err);
     } finally {
@@ -138,6 +158,7 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const removeDownload = useCallback(async (id: string) => {
     await deleteDownload(id);
     setDownloadedIds((prev) => { const s = new Set(prev); s.delete(id); return s; });
+    setDownloaded((prev) => prev.filter(t => t.id !== id));
   }, []);
 
   useEffect(() => {
@@ -350,6 +371,8 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       toggleAutoQueue,
       radioStation,
       playStation,
+      downloaded,
+      refreshDownloaded,
     }}>
       {children}
     </AudioContext.Provider>

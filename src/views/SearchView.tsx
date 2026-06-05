@@ -92,24 +92,51 @@ export const SearchView: React.FC = () => {
         </div>
       </div>
 
-      {/* Search row */}
-      <form onSubmit={handleSearch} className="flex gap-2.5 mt-6 mb-7">
+      {/* Search row — large & prominent, constrained width */}
+      <form onSubmit={handleSearch} className="flex gap-3 mt-7 mb-8" style={{ maxWidth: 560 }}>
         <div className="relative flex-1">
-          <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--tt)]" />
+          <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--tt)] pointer-events-none" />
           <input
             type="text"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Artist, track, album…"
-            className="w-full bg-[var(--s1)] border border-[var(--bs)] rounded-[7px] py-2.5 pr-3 pl-[34px] text-[12px] text-[var(--tp)] tracking-[0.01em] outline-none focus:border-[var(--bm)]"
+            placeholder="Search artists, tracks, albums…"
+            className="w-full rounded-[12px] outline-none transition-all"
+            style={{
+              height: 52,
+              paddingLeft: 46,
+              paddingRight: 16,
+              fontSize: 15,
+              letterSpacing: '0.01em',
+              color: 'var(--tp)',
+              background: 'var(--s1)',
+              border: '1px solid var(--bs)',
+            }}
+            onFocus={e => { e.currentTarget.style.borderColor = 'rgba(201,168,76,0.45)'; e.currentTarget.style.background = 'var(--s2)'; }}
+            onBlur={e => { e.currentTarget.style.borderColor = 'var(--bs)'; e.currentTarget.style.background = 'var(--s1)'; }}
           />
         </div>
         <button
           type="submit"
           disabled={isLoading}
-          className="px-5 py-2.5 bg-[var(--gold)] text-[var(--obsidian)] border-none rounded-[7px] text-[11px] font-bold tracking-[0.07em] uppercase cursor-pointer whitespace-nowrap hover:bg-[var(--gold-b)] disabled:opacity-60 transition-colors"
+          className="flex items-center justify-center gap-2 rounded-[12px] cursor-pointer whitespace-nowrap hover:scale-[1.03] active:scale-95 transition-transform disabled:opacity-60"
+          style={{
+            height: 52,
+            padding: '0 26px',
+            border: 'none',
+            background: 'linear-gradient(135deg, var(--gold-b), var(--gold))',
+            color: 'var(--obsidian)',
+            fontSize: 13,
+            fontWeight: 700,
+            letterSpacing: '0.07em',
+            textTransform: 'uppercase',
+            boxShadow: '0 4px 18px rgba(201,168,76,0.3)',
+          }}
         >
-          {isLoading ? 'Searching…' : 'Search'}
+          {isLoading
+            ? <Loader size={16} className="animate-spin" />
+            : <Search size={16} strokeWidth={2.5} />}
+          {isLoading ? 'Searching' : 'Search'}
         </button>
       </form>
 
