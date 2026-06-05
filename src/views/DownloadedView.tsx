@@ -47,7 +47,7 @@ export const DownloadedView: React.FC = () => {
 
           <div className="grid grid-cols-[30px_1fr_160px_32px] gap-x-[14px] px-[10px] pb-[8px] border-b border-[var(--bd)] mb-[2px]">
             {['#', 'Track', 'Artist', ''].map((h, i) => (
-              <div key={i} className="text-[8px] text-[var(--tt)] tracking-[0.1em] uppercase" style={{ fontFamily: 'var(--fm)' }}>{h}</div>
+              <div key={i} className="text-[10px] text-[var(--ts)] tracking-[0.12em] uppercase font-semibold" style={{ fontFamily: 'var(--fm)' }}>{h}</div>
             ))}
           </div>
 

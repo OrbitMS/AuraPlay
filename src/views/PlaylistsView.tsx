@@ -125,7 +125,7 @@ export const PlaylistsView: React.FC = () => {
         <div className="grid gap-3 mt-7" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))' }}>
           {playlists.map(p => (
             <div key={p.id} onClick={() => setSelectedId(p.id)}
-              className="cursor-pointer rounded-[10px] p-4 transition-colors group"
+              className="lift cursor-pointer rounded-[12px] p-4 group"
               style={{ background: 'var(--s1)', border: '1px solid var(--bd)' }}
               onMouseEnter={e => (e.currentTarget.style.background = 'var(--s2)')}
               onMouseLeave={e => (e.currentTarget.style.background = 'var(--s1)')}>

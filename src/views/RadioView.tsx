@@ -55,7 +55,7 @@ function StationCard({
   return (
     <div
       onClick={onPlay}
-      className={`group flex flex-col gap-2 p-3 rounded-[8px] cursor-pointer border transition-all ${
+      className={`lift group flex flex-col gap-2 p-3.5 rounded-[12px] cursor-pointer border ${
         active
           ? 'border-[rgba(201,168,76,0.4)] bg-[var(--gold-g)]'
           : 'border-[var(--bd)] bg-[var(--s1)] hover:bg-[var(--s2)] hover:border-[var(--bs)]'

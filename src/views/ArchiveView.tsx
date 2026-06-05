@@ -121,7 +121,7 @@ export const ArchiveView: React.FC = () => {
         <div className="grid gap-3" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))' }}>
           {items.map(it => (
             <div key={it.identifier} onClick={() => openAndLoad(it)}
-              className="group cursor-pointer rounded-[10px] p-3 transition-colors"
+              className="lift group cursor-pointer rounded-[12px] p-3"
               style={{ background: 'var(--s1)', border: '1px solid var(--bd)' }}
               onMouseEnter={e => (e.currentTarget.style.background = 'var(--s2)')}
               onMouseLeave={e => (e.currentTarget.style.background = 'var(--s1)')}>
