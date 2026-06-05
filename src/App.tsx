@@ -10,6 +10,8 @@ const SettingsView   = lazy(() => import('./views/SettingsView').then(m => ({ de
 const RadioView      = lazy(() => import('./views/RadioView').then(m => ({ default: m.RadioView })));
 const DownloadedView = lazy(() => import('./views/DownloadedView').then(m => ({ default: m.DownloadedView })));
 const PlaylistsView  = lazy(() => import('./views/PlaylistsView').then(m => ({ default: m.PlaylistsView })));
+const ArchiveView    = lazy(() => import('./views/ArchiveView').then(m => ({ default: m.ArchiveView })));
+const JamendoView    = lazy(() => import('./views/JamendoView').then(m => ({ default: m.JamendoView })));
 import { QueueSidebar } from './components/QueueSidebar';
 import { NowPlayingScreen } from './components/NowPlayingScreen';
 import { ErrorBoundary } from './components/ErrorBoundary';
@@ -18,7 +20,7 @@ import { useSettings } from './hooks/useSettings';
 import { setAudioQuality } from './services/youtube';
 import './App.css';
 
-type View = 'search' | 'favorites' | 'radio' | 'settings' | 'downloaded' | 'playlists';
+type View = 'search' | 'favorites' | 'radio' | 'settings' | 'downloaded' | 'playlists' | 'archive' | 'jamendo';
 
 const clamp = (v: number, lo: number, hi: number) => Math.min(Math.max(v, lo), hi);
 const numFromLS = (key: string, def: number) => {
@@ -124,6 +126,12 @@ function App() {
               <NavItem active={view === 'radio'} onClick={() => setView('radio')}
                 icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="w-[19px] h-[19px] flex-shrink-0"><path d="M3 18v-6a9 9 0 0 1 18 0v6"/><path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z"/></svg>}
                 label="Radio" />
+              <NavItem active={view === 'archive'} onClick={() => setView('archive')}
+                icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="w-[19px] h-[19px] flex-shrink-0"><path d="M4 7v13h16V7"/><rect x="2" y="3" width="20" height="4"/><line x1="10" y1="12" x2="14" y2="12"/></svg>}
+                label="Archive" />
+              <NavItem active={view === 'jamendo'} onClick={() => setView('jamendo')}
+                icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="w-[19px] h-[19px] flex-shrink-0"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/></svg>}
+                label="Jamendo" />
             </div>
 
             <div className="h-px mx-5 my-4" style={{ background: 'rgba(255,255,255,0.06)' }} />
@@ -160,6 +168,8 @@ function App() {
                 {view === 'playlists'  && <PlaylistsView />}
                 {view === 'downloaded' && <DownloadedView />}
                 {view === 'radio'      && <RadioView />}
+                {view === 'archive'    && <ArchiveView />}
+                {view === 'jamendo'    && <JamendoView />}
                 {view === 'settings'  && (
                   <SettingsView
                     quality={settings.audioQuality}

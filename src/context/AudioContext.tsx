@@ -26,6 +26,9 @@ export interface Track {
   title: string;
   artist: string;
   thumbnail: string;
+  /** Direct audio URL (Internet Archive, Jamendo, etc.). When set, playback
+   *  streams this URL directly instead of resolving via YouTube. */
+  url?: string;
 }
 
 export type { RepeatMode };
@@ -106,8 +109,8 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   useEffect(() => {
     if (radioStation || queue.length === 0 || currentIndex < 0) return;
     const nextIdx = currentIndex + 1 < queue.length ? currentIndex + 1 : 0;
-    const nextId = queue[nextIdx]?.id;
-    if (nextId && nextId !== queue[currentIndex]?.id) prefetchStreamUrl(nextId);
+    const next = queue[nextIdx];
+    if (next && !next.url && next.id !== queue[currentIndex]?.id) prefetchStreamUrl(next.id);
   }, [currentIndex, queue, radioStation]);
 
   // Auto-queue: when the current track is the last in the queue, fetch related
@@ -121,8 +124,9 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     const isLastTrack = currentIndex === queue.length - 1;
     if (!isLastTrack) return;
 
-    const trackId = queue[currentIndex]?.id;
-    if (!trackId) return;
+    const cur = queue[currentIndex];
+    const trackId = cur?.id;
+    if (!trackId || cur?.url) return; // auto-queue only applies to YouTube tracks
 
     isFetchingAutoRef.current = true;
     getRelatedTracks(trackId)
@@ -188,7 +192,8 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           // Auto advance to next song when current finishes
           if (repeatMode === 'one') {
             // Replay same song
-            if (currentTrack) nativePlayTrack(currentTrack.id);
+            if (currentTrack?.url) playDirectStream(currentTrack.url).catch(() => {});
+            else if (currentTrack) nativePlayTrack(currentTrack.id);
           } else {
             nextTrack(true);
           }
@@ -228,7 +233,8 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       setCurrentIndex(0);
     }
     setIsPlaying(true);
-    nativePlayTrack(track.id).catch(err => console.error("Playback failed:", err));
+    if (track.url) playDirectStream(track.url).catch(err => console.error("Playback failed:", err));
+    else nativePlayTrack(track.id).catch(err => console.error("Playback failed:", err));
   };
 
   const togglePlay = async () => {
@@ -250,6 +256,13 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const playIndex = (index: number) => {
     const track = queue[index];
     if (!track) return;
+    // Direct-URL tracks (Internet Archive, Jamendo) skip YouTube resolution
+    if (track.url) {
+      setCurrentIndex(index);
+      setIsPlaying(true);
+      playDirectStream(track.url).catch(err => console.error("Playback failed:", err));
+      return;
+    }
     // If this ID is known-unplayable, skip it immediately without a network attempt
     if (isUnplayable(track.id)) {
       skipCountRef.current += 1;
