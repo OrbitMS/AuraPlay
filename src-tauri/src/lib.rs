@@ -120,14 +120,14 @@ pub fn run() {
         ])
         .setup(|app| {
             // ── System tray ────────────────────────────────────────────────
-            let show = MenuItem::with_id(app, "show", "Show Metrolist", true, None::<&str>)?;
+            let show = MenuItem::with_id(app, "show", "Show AuraPlay", true, None::<&str>)?;
             let hide = MenuItem::with_id(app, "hide", "Hide", true, None::<&str>)?;
             let quit = MenuItem::with_id(app, "quit", "Quit", true, None::<&str>)?;
             let menu = Menu::with_items(app, &[&show, &hide, &quit])?;
 
             TrayIconBuilder::with_id("main-tray")
                 .icon(app.default_window_icon().unwrap().clone())
-                .tooltip("Metrolist")
+                .tooltip("AuraPlay")
                 .menu(&menu)
                 .show_menu_on_left_click(false)
                 .on_menu_event(|app, event| match event.id.as_ref() {

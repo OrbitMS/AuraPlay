@@ -12,39 +12,35 @@
       <stop offset="100%" stop-color="#c39f43"/>
     </linearGradient>
 
-    <radialGradient id="glow" cx="50%" cy="50%" r="50%">
-      <stop offset="0%"   stop-color="#e8c76a" stop-opacity="0.5"/>
-      <stop offset="55%"  stop-color="#c9a84c" stop-opacity="0.14"/>
+    <radialGradient id="aura" cx="50%" cy="50%" r="50%">
+      <stop offset="0%"   stop-color="#e8c76a" stop-opacity="0.55"/>
+      <stop offset="55%"  stop-color="#c9a84c" stop-opacity="0.16"/>
       <stop offset="100%" stop-color="#c9a84c" stop-opacity="0"/>
     </radialGradient>
 
     <filter id="drop" x="-40%" y="-40%" width="180%" height="180%">
-      <feDropShadow dx="0" dy="14" stdDeviation="22" flood-color="#000000" flood-opacity="0.5"/>
+      <feDropShadow dx="0" dy="14" stdDeviation="24" flood-color="#000000" flood-opacity="0.5"/>
     </filter>
   </defs>
 
   <!-- Rounded tile -->
   <rect x="0" y="0" width="1024" height="1024" rx="232" ry="232" fill="url(#bg)"/>
-
   <!-- Top sheen -->
   <rect x="0" y="0" width="1024" height="512" rx="232" ry="232" fill="#ffffff" opacity="0.025"/>
-
   <!-- Gold hairline border -->
   <rect x="9" y="9" width="1006" height="1006" rx="225" ry="225" fill="none"
         stroke="#c9a84c" stroke-opacity="0.25" stroke-width="3"/>
 
-  <!-- Glow + vinyl rings, centered on the note -->
-  <circle cx="512" cy="512" r="380" fill="url(#glow)"/>
-  <circle cx="512" cy="512" r="338" fill="none" stroke="#c9a84c" stroke-opacity="0.11" stroke-width="2.5"/>
-  <circle cx="512" cy="512" r="270" fill="none" stroke="#c9a84c" stroke-opacity="0.08" stroke-width="2.5"/>
+  <!-- Aura glow + concentric rings -->
+  <circle cx="512" cy="512" r="392" fill="url(#aura)"/>
+  <circle cx="512" cy="512" r="340" fill="none" stroke="#c9a84c" stroke-opacity="0.14" stroke-width="3"/>
+  <circle cx="512" cy="512" r="276" fill="none" stroke="#c9a84c" stroke-opacity="0.10" stroke-width="3"/>
+  <circle cx="512" cy="512" r="214" fill="none" stroke="#c9a84c" stroke-opacity="0.07" stroke-width="3"/>
 
-  <!-- Metrolist music-note mark — centered hero -->
-  <g transform="translate(107,167) scale(30)" filter="url(#drop)">
-    <g fill="none" stroke="url(#gold)" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">
-      <line x1="12" y1="18" x2="12" y2="5"/>
-      <polyline points="12 5 21 2 21 8 12 8"/>
-    </g>
-    <circle cx="9"  cy="18" r="3.5" fill="url(#gold)"/>
-    <circle cx="18" cy="15" r="3.5" fill="url(#gold)"/>
+  <!-- Play triangle (rounded) -->
+  <g filter="url(#drop)">
+    <path d="M 420 352 L 700 512 L 420 672 Z"
+          fill="url(#gold)" stroke="url(#gold)" stroke-width="46"
+          stroke-linejoin="round" stroke-linecap="round"/>
   </g>
 </svg>

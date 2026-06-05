@@ -29,7 +29,7 @@ async function apiFetch(path: string): Promise<Response> {
   for (const host of API_HOSTS) {
     try {
       const r = await fetch(`${host}${path}`, {
-        headers: { 'User-Agent': 'MetrolistDesktop/1.0', Accept: 'application/json' },
+        headers: { 'User-Agent': 'AuraPlay/1.0', Accept: 'application/json' },
       });
       if (r.ok) return r;
     } catch (e) {

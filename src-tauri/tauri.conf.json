@@ -1,8 +1,8 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/schema.json",
-  "productName": "metrolist-desktop",
+  "productName": "AuraPlay",
   "version": "0.1.0",
-  "identifier": "com.metrolist.desktop", 
+  "identifier": "com.orbitms.auraplay",
   "build": {
     "beforeDevCommand": "npm run dev",
     "devUrl": "http://localhost:1420",
@@ -13,7 +13,7 @@
     "windows": [
       {
         "label": "main",
-        "title": "metrolist-desktop",
+        "title": "AuraPlay",
         "width": 1100,
         "height": 720,
         "minWidth": 720,

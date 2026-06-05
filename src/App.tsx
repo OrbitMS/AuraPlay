@@ -54,7 +54,7 @@ function App() {
                 </svg>
               </div>
               <div className="flex flex-col leading-none gap-1">
-                <span className="text-[18px] text-[var(--tp)] tracking-[-0.02em]" style={{ fontFamily: 'var(--fd)' }}>Metrolist</span>
+                <span className="text-[18px] text-[var(--tp)] tracking-[-0.02em]" style={{ fontFamily: 'var(--fd)' }}>AuraPlay</span>
                 <span className="text-[9px] text-[var(--tt)] tracking-[0.18em] uppercase" style={{ fontFamily: 'var(--fm)' }}>Studio</span>
               </div>
             </div>
