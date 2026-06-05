@@ -1,7 +1,8 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { parseSourceList, matchSources, type MatchRow, type SourceTrack } from '../services/playlistImport';
 import { getYouTubePlaylistTracks } from '../services/youtube';
 import { getSpotifyTracks } from '../services/spotify';
+import { isSpotifyConnected, getMySpotifyPlaylists, getSpotifyPlaylistTracksAuthed, type SpotifyPlaylist } from '../services/spotifyAuth';
 import { createPlaylist } from '../hooks/usePlaylists';
 import type { Track } from '../context/AudioContext';
 import { X, FileText, Play, Music2, Check, AlertTriangle, XCircle, Loader, ListPlus } from 'lucide-react';
@@ -21,6 +22,32 @@ export const ImportPlaylistModal: React.FC<Props> = ({ onClose, onCreated }) => 
   const [ytUrl, setYtUrl] = useState('');
   const [spotifyUrl, setSpotifyUrl] = useState('');
   const [name, setName] = useState('');
+  const [myPlaylists, setMyPlaylists] = useState<SpotifyPlaylist[] | null>(null);
+  const connected = isSpotifyConnected();
+
+  // Load the user's Spotify playlists when the Spotify tab opens (if connected)
+  useEffect(() => {
+    if (tab === 'spotify' && connected && myPlaylists === null) {
+      getMySpotifyPlaylists().then(setMyPlaylists).catch(() => setMyPlaylists([]));
+    }
+  }, [tab, connected, myPlaylists]);
+
+  const importMyPlaylist = async (pl: SpotifyPlaylist) => {
+    setError('');
+    setStage('matching');
+    setProgress({ done: 0, total: pl.trackCount });
+    try {
+      const tracks = await getSpotifyPlaylistTracksAuthed(pl.id);
+      if (!name) setName(pl.name);
+      setProgress({ done: 0, total: tracks.length });
+      const result = await matchSources(tracks, (done, total) => setProgress({ done, total }));
+      setRows(result);
+      setStage('review');
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Could not load that playlist.');
+      setStage('input');
+    }
+  };
   const [rows, setRows] = useState<MatchRow[]>([]);
   const [progress, setProgress] = useState({ done: 0, total: 0 });
   const [error, setError] = useState('');
@@ -173,6 +200,42 @@ export const ImportPlaylistModal: React.FC<Props> = ({ onClose, onCreated }) => 
                       Import from Spotify
                     </button>
                   </div>
+
+                  {/* Connected account → your (private) playlists */}
+                  {connected ? (
+                    <div className="mt-5">
+                      <div className="text-[9px] font-bold uppercase tracking-[0.14em] mb-2" style={{ color: 'var(--tt)', fontFamily: 'var(--fm)' }}>
+                        Your Spotify Playlists
+                      </div>
+                      {myPlaylists === null ? (
+                        <div className="flex items-center gap-2 text-[11px] py-3" style={{ color: 'var(--ts)' }}>
+                          <Loader size={13} className="animate-spin" /> Loading…
+                        </div>
+                      ) : myPlaylists.length === 0 ? (
+                        <p className="text-[11px] py-2" style={{ color: 'var(--tt)' }}>No playlists found.</p>
+                      ) : (
+                        <div className="flex flex-col gap-1 max-h-[180px] overflow-y-auto">
+                          {myPlaylists.map(pl => (
+                            <button key={pl.id} onClick={() => importMyPlaylist(pl)}
+                              className="flex items-center gap-3 px-2.5 py-2 rounded-[6px] text-left transition-colors hover:bg-white/[0.05]"
+                              style={{ background: 'none', border: 'none', cursor: 'pointer' }}>
+                              <div className="w-9 h-9 rounded-[5px] overflow-hidden flex-shrink-0 flex items-center justify-center" style={{ background: 'var(--s3)' }}>
+                                {pl.image ? <img src={pl.image} className="w-full h-full object-cover" /> : <Music2 size={14} className="text-[var(--tt)]" />}
+                              </div>
+                              <div className="min-w-0">
+                                <p className="text-[12px] truncate" style={{ color: 'var(--tp)' }}>{pl.name}</p>
+                                <p className="text-[10px]" style={{ color: 'var(--ts)', fontFamily: 'var(--fm)' }}>{pl.trackCount} tracks</p>
+                              </div>
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <p className="text-[10px] mt-4 opacity-70" style={{ color: 'var(--tt)', fontFamily: 'var(--fm)' }}>
+                      Want your private playlists? Connect Spotify in Settings.
+                    </p>
+                  )}
                 </>
               )}
 

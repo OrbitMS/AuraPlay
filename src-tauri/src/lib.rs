@@ -91,6 +91,46 @@ async fn delete_download(app: AppHandle, id: String) -> Result<(), String> {
     Ok(())
 }
 
+// One-shot loopback server that captures the Spotify OAuth redirect.
+// Binds 127.0.0.1:<port>, waits for the /callback request, returns its query
+// string (code/state/error) to the frontend, and shows a friendly page.
+#[tauri::command]
+async fn spotify_oauth_listen(port: u16) -> Result<String, String> {
+    use tokio::io::{AsyncReadExt, AsyncWriteExt};
+    use tokio::net::TcpListener;
+
+    let listener = TcpListener::bind(("127.0.0.1", port))
+        .await
+        .map_err(|e| format!("Could not bind port {port}: {e}"))?;
+
+    loop {
+        let (mut stream, _) = listener.accept().await.map_err(|e| e.to_string())?;
+        let mut buf = vec![0u8; 8192];
+        let n = stream.read(&mut buf).await.map_err(|e| e.to_string())?;
+        let req = String::from_utf8_lossy(&buf[..n]);
+        let first = req.lines().next().unwrap_or("");
+        let path = first.split_whitespace().nth(1).unwrap_or("");
+
+        // Ignore stray requests (e.g. /favicon.ico) — wait for /callback
+        if !path.starts_with("/callback") {
+            let resp = "HTTP/1.1 204 No Content\r\nConnection: close\r\n\r\n";
+            let _ = stream.write_all(resp.as_bytes()).await;
+            continue;
+        }
+
+        let query = path.splitn(2, '?').nth(1).unwrap_or("").to_string();
+        let body = "<!doctype html><html><body style='font-family:sans-serif;background:#0e0e12;color:#f0ede8;text-align:center;padding-top:90px'><h2 style='color:#c9a84c;font-weight:600'>AuraPlay</h2><p>Spotify connected — you can close this window and return to the app.</p></body></html>";
+        let resp = format!(
+            "HTTP/1.1 200 OK\r\nContent-Type: text/html; charset=utf-8\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",
+            body.len(),
+            body
+        );
+        let _ = stream.write_all(resp.as_bytes()).await;
+        let _ = stream.flush().await;
+        return Ok(query);
+    }
+}
+
 #[tauri::command]
 async fn get_offline_path(app: AppHandle, id: String) -> Result<String, String> {
     let path = offline_dir(&app)?.join(format!("{}.webm", id));
@@ -117,6 +157,7 @@ pub fn run() {
             list_downloaded,
             delete_download,
             get_offline_path,
+            spotify_oauth_listen,
         ])
         .setup(|app| {
             // ── System tray ────────────────────────────────────────────────
