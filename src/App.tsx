@@ -17,6 +17,7 @@ const JamendoView    = lazy(() => import('./views/JamendoView').then(m => ({ def
 const StatsView      = lazy(() => import('./views/StatsView').then(m => ({ default: m.StatsView })));
 import { QueueSidebar } from './components/QueueSidebar';
 import { NowPlayingScreen } from './components/NowPlayingScreen';
+import { DynamicTheme } from './components/DynamicTheme';
 import { useStats } from './hooks/useStats';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { UpdateBanner } from './components/UpdateBanner';
@@ -84,6 +85,7 @@ function App() {
 
   return (
     <AudioProvider>
+      <DynamicTheme />
       {/* Translucent shell — desktop/acrylic shows through for depth */}
       <div className="h-screen w-screen overflow-hidden flex flex-col"
         style={{ background: 'transparent' }}>

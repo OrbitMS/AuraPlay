@@ -140,7 +140,7 @@ function Section({
       <h2 className="text-[14px] font-semibold text-[var(--tp)] mb-3 tracking-[-0.01em]">{title}</h2>
       {loading ? (
         /* Skeleton — same responsive grid */
-        <div className="grid gap-3" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(110px, 1fr))' }}>
+        <div className="grid gap-3" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(158px, 1fr))' }}>
           {Array.from({ length: 6 }).map((_, i) => (
             <div key={i}>
               <div className="w-full aspect-square rounded-[6px] bg-[var(--s2)] animate-pulse mb-2" />
@@ -152,7 +152,7 @@ function Section({
       ) : (
         <div
           className="grid gap-3"
-          style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(110px, 1fr))' }}
+          style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(158px, 1fr))' }}
         >
           {songs.map(song => (
             <TrackCard

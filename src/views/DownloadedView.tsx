@@ -69,9 +69,9 @@ export const DownloadedView: React.FC = () => {
                   </span>
                   <div className="flex items-center gap-2.5 overflow-hidden">
                     {track.thumbnail ? (
-                      <img src={safeImageUrl(track.thumbnail)} className={`w-9 h-9 rounded-[4px] object-cover bg-[var(--s2)] flex-shrink-0 border ${active ? 'border-[rgba(201,168,76,0.3)]' : 'border-[var(--bd)]'}`} />
+                      <img src={safeImageUrl(track.thumbnail)} className={`w-11 h-11 rounded-[6px] object-cover bg-[var(--s2)] flex-shrink-0 border ${active ? 'border-[rgba(201,168,76,0.3)]' : 'border-[var(--bd)]'}`} />
                     ) : (
-                      <div className={`w-9 h-9 rounded-[4px] bg-[var(--s2)] flex-shrink-0 border ${active ? 'border-[rgba(201,168,76,0.3)]' : 'border-[var(--bd)]'}`} />
+                      <div className={`w-11 h-11 rounded-[6px] bg-[var(--s2)] flex-shrink-0 border ${active ? 'border-[rgba(201,168,76,0.3)]' : 'border-[var(--bd)]'}`} />
                     )}
                     <span className={`text-[12px] font-medium tracking-[0.01em] truncate ${active ? 'text-[var(--gold)]' : 'text-[var(--tp)]'}`}>{track.title}</span>
                   </div>

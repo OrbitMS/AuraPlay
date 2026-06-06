@@ -66,8 +66,8 @@ export const StatsView: React.FC = () => {
                       <span className="text-[12px] text-[var(--tt)] text-center tabular-nums" style={{ fontFamily: 'var(--fm)' }}>{i + 1}</span>
                       <div className="flex items-center gap-2.5 overflow-hidden">
                         {t.thumbnail
-                          ? <img src={safeImageUrl(t.thumbnail)} className={`w-9 h-9 rounded-[4px] object-cover bg-[var(--s2)] flex-shrink-0 border ${active ? 'border-[rgba(201,168,76,0.3)]' : 'border-[var(--bd)]'}`} />
-                          : <div className="w-9 h-9 rounded-[4px] bg-[var(--s2)] flex-shrink-0 border border-[var(--bd)] flex items-center justify-center"><Music2 size={13} className="text-[var(--tt)]" /></div>}
+                          ? <img src={safeImageUrl(t.thumbnail)} className={`w-11 h-11 rounded-[6px] object-cover bg-[var(--s2)] flex-shrink-0 border ${active ? 'border-[rgba(201,168,76,0.3)]' : 'border-[var(--bd)]'}`} />
+                          : <div className="w-11 h-11 rounded-[6px] bg-[var(--s2)] flex-shrink-0 border border-[var(--bd)] flex items-center justify-center"><Music2 size={13} className="text-[var(--tt)]" /></div>}
                         <div className="min-w-0">
                           <p className={`text-[12px] font-medium truncate ${active ? 'text-[var(--gold)]' : 'text-[var(--tp)]'}`}>{t.title}</p>
                           <p className="text-[10px] text-[var(--ts)] truncate" style={{ fontFamily: 'var(--fm)' }}>{t.artist}</p>
