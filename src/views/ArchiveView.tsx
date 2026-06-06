@@ -3,6 +3,7 @@ import { AudioContext, type Track } from '../context/AudioContext';
 import { searchArchive, getArchiveItemTracks, type ArchiveItem } from '../services/archive';
 import { safeImageUrl } from '../lib/safeUrl';
 import { rankItems } from '../lib/rankResults';
+import { PageHeader } from '../components/PageHeader';
 import { Search, Library, ChevronLeft, Play, Loader, Disc3 } from 'lucide-react';
 
 export const ArchiveView: React.FC = () => {
@@ -88,11 +89,8 @@ export const ArchiveView: React.FC = () => {
 
   /* ── Search + results ── */
   return (
-    <div className="px-[36px] pt-[32px] pb-[40px] w-full">
-      <h1 className="text-[28px] text-[var(--tp)] tracking-[-0.01em]" style={{ fontFamily: 'var(--fd)' }}>Internet Archive</h1>
-      <div className="text-[10px] text-[var(--tt)] mt-1.5 tracking-[0.08em] uppercase" style={{ fontFamily: 'var(--fm)' }}>
-        Live Music · Public Domain · Free &amp; Legal
-      </div>
+    <div className="px-[40px] pt-[36px] pb-[48px] w-full">
+      <PageHeader eyebrow="Discover" title="Internet Archive" subtitle="Live music · public domain · free & legal" />
 
       <form onSubmit={doSearch} className="flex gap-3 mt-7 mb-7" style={{ maxWidth: 560 }}>
         <div className="relative flex-1">

@@ -9,6 +9,7 @@ import {
 import { AudioContext } from '../context/AudioContext';
 import { Search, Radio, Loader } from 'lucide-react';
 import { safeImageUrl } from '../lib/safeUrl';
+import { PageHeader } from '../components/PageHeader';
 
 const GENRES: { id: string; label: string; tag: string | null }[] = [
   { id: 'top',        label: '⭐ Top',      tag: null },
@@ -167,14 +168,8 @@ export const RadioView: React.FC = () => {
   };
 
   return (
-    <div className="px-[36px] pt-[32px] pb-[40px] w-full">
-      {/* Header */}
-      <h1 className="text-[28px] text-[var(--tp)] tracking-[-0.01em] leading-[1.1]" style={{ fontFamily: 'var(--fd)' }}>
-        Radio
-      </h1>
-      <div className="text-[10px] text-[var(--tt)] mt-1.5 tracking-[0.08em] uppercase" style={{ fontFamily: 'var(--fm)' }}>
-        Ad-free · High Quality · Live Streams
-      </div>
+    <div className="px-[40px] pt-[36px] pb-[48px] w-full">
+      <PageHeader eyebrow="Discover" title="Radio" subtitle="Ad-free · high quality · live streams" />
 
       {/* Search — matches the Music search bar */}
       <form

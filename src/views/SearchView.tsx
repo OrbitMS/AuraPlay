@@ -5,7 +5,7 @@ import { useLikes } from '../hooks/useLikes';
 import { useHistory } from '../hooks/useHistory';
 import { HomeContent } from '../components/HomeContent';
 import { AddToPlaylistButton } from '../components/AddToPlaylistButton';
-import { safeImageUrl } from '../lib/safeUrl';
+import { TrackRow } from '../components/TrackRow';
 import { rankSearchResults } from '../lib/rankResults';
 import { Search, Download, CheckCircle, Loader, Heart, Minus, Plus } from 'lucide-react';
 
@@ -151,75 +151,51 @@ export const SearchView: React.FC = () => {
 
       {/* Search results */}
       {hasSearched && (
-      <>
-      <div className="grid grid-cols-[30px_1fr_160px_38px_38px_38px] gap-x-[14px] px-[10px] pb-[8px] border-b border-[var(--bd)] mb-[2px]">
-        <div className="text-[10px] text-[var(--ts)] tracking-[0.12em] uppercase font-semibold" style={{ fontFamily: 'var(--fm)' }}>#</div>
-        <div className="text-[10px] text-[var(--ts)] tracking-[0.12em] uppercase font-semibold" style={{ fontFamily: 'var(--fm)' }}>Track</div>
-        <div className="text-[10px] text-[var(--ts)] tracking-[0.12em] uppercase font-semibold" style={{ fontFamily: 'var(--fm)' }}>Artist</div>
-        <div></div>
-        <div></div>
-        <div></div>
-      </div>
-
-      <div className="flex flex-col">
-        {results.map((song, idx) => {
-          const active = currentTrackId === song.id;
-          const isDownloaded = downloadedIds.has(song.id);
-          const isDownloading = downloadingIds.has(song.id);
-          const liked = isLiked(song.id);
-          const track = toTrack(song);
-          return (
-            <div
-              key={song.id}
-              onClick={() => playSong(song)}
-              className={`cv-row grid grid-cols-[30px_1fr_160px_38px_38px_38px] gap-x-[14px] items-center px-[10px] py-[7px] rounded-[5px] cursor-pointer border-l-2 transition-colors ${active ? 'bg-[var(--gold-g)] border-[var(--gold)]' : 'border-transparent hover:bg-white/[0.025]'}`}
-            >
-              <span className="text-[10px] text-[var(--tt)] text-center" style={{ fontFamily: 'var(--fm)' }}>
-                {active ? (
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" strokeWidth="2" strokeLinecap="round" className="animate-spin-slow mx-auto">
-                    <path d="M12 2a10 10 0 1 0 0 20"/><circle cx="12" cy="12" r="3"/>
-                  </svg>
-                ) : (
-                  String(idx + 1).padStart(2, '0')
-                )}
-              </span>
-              <div className="flex items-center gap-2.5 overflow-hidden">
-                <img src={safeImageUrl(song.thumbnails?.[0]?.url)} className={`w-11 h-11 rounded-[6px] object-cover bg-[var(--s2)] flex-shrink-0 border ${active ? 'border-[rgba(201,168,76,0.3)]' : 'border-[var(--bd)]'}`} />
-                <span className={`text-[12px] font-medium tracking-[0.01em] truncate ${active ? 'text-[var(--gold)]' : 'text-[var(--tp)]'}`}>{song.name}</span>
-              </div>
-              <span className="text-[10px] text-[var(--ts)] truncate tracking-[0.02em]" style={{ fontFamily: 'var(--fm)' }}>{song.artists?.[0]?.name}</span>
-              <button
-                onClick={(e) => { e.stopPropagation(); toggleLike(track); }}
-                title={liked ? 'Remove from favorites' : 'Add to favorites'}
-                className="flex items-center justify-center w-9 h-9 rounded-[7px] transition-colors hover:bg-white/[0.08]"
-              >
-                <Heart
-                  size={18}
-                  fill={liked ? '#c9a84c' : 'none'}
-                  stroke={liked ? '#c9a84c' : 'var(--ts)'}
-                  className="transition-all"
-                />
-              </button>
-              <button
-                onClick={(e) => handleDownload(e, song)}
-                title={isDownloaded ? 'Remove download' : isDownloading ? 'Downloading…' : 'Download for offline'}
-                className="flex items-center justify-center w-9 h-9 rounded-[7px] transition-colors hover:bg-white/[0.08] disabled:opacity-40"
-                disabled={isDownloading}
-              >
-                {isDownloading ? (
-                  <Loader size={18} className="text-[var(--gold)] animate-spin" />
-                ) : isDownloaded ? (
-                  <CheckCircle size={18} className="text-[var(--gold)]" />
-                ) : (
-                  <Download size={18} className="text-[var(--ts)] hover:text-[var(--tp)]" />
-                )}
-              </button>
-              <AddToPlaylistButton track={track} />
-            </div>
-          );
-        })}
-      </div>
-      </>
+        <div className="flex flex-col gap-0.5">
+          {results.map((song, idx) => {
+            const liked = isLiked(song.id);
+            const isDownloaded = downloadedIds.has(song.id);
+            const isDownloading = downloadingIds.has(song.id);
+            const track = toTrack(song);
+            return (
+              <TrackRow
+                key={song.id}
+                index={idx + 1}
+                title={song.name}
+                artist={song.artists?.[0]?.name}
+                thumbnail={song.thumbnails?.[0]?.url}
+                active={currentTrackId === song.id}
+                onPlay={() => playSong(song)}
+                meta={
+                  (liked || isDownloaded) ? (
+                    <div className="flex items-center gap-1.5 pr-1">
+                      {liked && <Heart size={15} fill="var(--gold)" stroke="var(--gold)" />}
+                      {isDownloaded && <CheckCircle size={15} className="text-[var(--gold)]" />}
+                    </div>
+                  ) : null
+                }
+                actions={
+                  <>
+                    <button onClick={e => { e.stopPropagation(); toggleLike(track); }} title={liked ? 'Unlike' : 'Like'}
+                      className="flex items-center justify-center w-9 h-9 rounded-full hover:bg-white/[0.08]"
+                      style={{ background: 'none', border: 'none', cursor: 'pointer' }}>
+                      <Heart size={17} fill={liked ? 'var(--gold)' : 'none'} stroke={liked ? 'var(--gold)' : 'var(--ts)'} />
+                    </button>
+                    <button onClick={e => handleDownload(e, song)} disabled={isDownloading}
+                      title={isDownloaded ? 'Remove download' : 'Download'}
+                      className="flex items-center justify-center w-9 h-9 rounded-full hover:bg-white/[0.08] disabled:opacity-50"
+                      style={{ background: 'none', border: 'none', cursor: 'pointer' }}>
+                      {isDownloading ? <Loader size={17} className="text-[var(--gold)] animate-spin" />
+                        : isDownloaded ? <CheckCircle size={17} className="text-[var(--gold)]" />
+                        : <Download size={17} className="text-[var(--ts)]" />}
+                    </button>
+                    <AddToPlaylistButton track={track} />
+                  </>
+                }
+              />
+            );
+          })}
+        </div>
       )}
       </div>
     </div>

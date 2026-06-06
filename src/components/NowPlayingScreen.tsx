@@ -176,13 +176,13 @@ export const NowPlayingScreen: React.FC<Props> = ({ onClose }) => {
           </div>
         ) : (
           /* ── Artwork ── */
-          <div className="flex-shrink-0 mb-8 relative"
+          <div className="flex-shrink-0 mb-9 relative"
             style={{
-              width: 'min(42vh, 340px)', height: 'min(42vh, 340px)',
-              borderRadius: isLive ? 18 : '50%',
+              width: 'min(46vh, 400px)', height: 'min(46vh, 400px)',
+              borderRadius: isLive ? 20 : '50%',
               overflow: 'hidden',
-              border: '1px solid rgba(201,168,76,0.25)',
-              boxShadow: '0 24px 80px rgba(0,0,0,0.6), 0 0 60px rgba(201,168,76,0.12)',
+              border: '1px solid var(--gold-d)',
+              boxShadow: '0 30px 90px rgba(0,0,0,0.65), 0 0 80px var(--gold-g)',
             }}>
             {art ? (
               <img src={art} alt="" className={`w-full h-full object-cover ${!isLive && isPlaying ? 'animate-spin-slow' : ''}`} />
@@ -201,17 +201,18 @@ export const NowPlayingScreen: React.FC<Props> = ({ onClose }) => {
         )}
 
         {/* Title block */}
-        <div className="text-center max-w-[560px] w-full mb-7">
+        <div className="text-center max-w-[620px] w-full mb-8">
           <div className="flex items-center justify-center gap-3">
-            <h1 className="text-[28px] font-bold truncate" style={{ color: 'var(--tp)', letterSpacing: '-0.01em' }}>{title}</h1>
+            <h1 className="text-[34px] font-extrabold truncate" style={{ color: 'var(--tp)', letterSpacing: '-0.025em' }}>{title}</h1>
             {currentTrack && (
               <button onClick={() => toggleLike(currentTrack)} title={liked ? 'Unlike' : 'Like'}
-                style={{ background: 'none', border: 'none', cursor: 'pointer', flexShrink: 0 }}>
-                <Heart size={20} fill={liked ? '#c9a84c' : 'none'} stroke={liked ? '#c9a84c' : 'var(--ts)'} />
+                className="flex-shrink-0 w-9 h-9 flex items-center justify-center rounded-full hover:bg-white/[0.08]"
+                style={{ background: 'none', border: 'none', cursor: 'pointer' }}>
+                <Heart size={20} fill={liked ? 'var(--gold)' : 'none'} stroke={liked ? 'var(--gold)' : 'var(--ts)'} />
               </button>
             )}
           </div>
-          <p className="text-[14px] mt-2 truncate" style={{ color: 'var(--gold)', fontFamily: 'var(--fm)', letterSpacing: '0.06em', textTransform: 'uppercase' }}>
+          <p className="text-[16px] mt-2 truncate font-medium" style={{ color: 'var(--gold)' }}>
             {artist}
           </p>
         </div>
