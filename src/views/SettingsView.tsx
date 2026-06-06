@@ -62,7 +62,7 @@ export const SettingsView: React.FC<Props> = ({ quality, onQualityChange }) => {
                 onClick={() => handleChange(q.value)}
                 className={`flex items-center justify-between w-full px-4 py-3 rounded-[8px] border text-left transition-all ${
                   active
-                    ? 'border-[rgba(201,168,76,0.4)] bg-[var(--gold-g)]'
+                    ? 'border-[var(--gold-d)] bg-[var(--gold-g)]'
                     : 'border-[var(--bd)] bg-[var(--s1)] hover:border-[var(--bs)] hover:bg-[var(--s2)]'
                 }`}
               >
@@ -163,7 +163,7 @@ const SpotifySection: React.FC = () => {
       </p>
 
       {connected ? (
-        <div className="flex items-center justify-between px-4 py-3 rounded-[8px]" style={{ background: 'var(--gold-g)', border: '1px solid rgba(201,168,76,0.3)' }}>
+        <div className="flex items-center justify-between px-4 py-3 rounded-[8px]" style={{ background: 'var(--gold-g)', border: '1px solid var(--gold-d)' }}>
           <div className="flex items-center gap-2 text-[12px]" style={{ color: 'var(--gold)' }}>
             <Check size={15} /> Connected to Spotify
           </div>

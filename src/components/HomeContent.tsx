@@ -67,12 +67,12 @@ const TrackCard = React.memo(function TrackCard({
             alt={song.name}
             className={`w-full aspect-square object-cover border bg-[var(--s2)] ${
               isAlbum ? 'rounded-[3px]' : 'rounded-[6px]'
-            } ${active ? 'border-[rgba(201,168,76,0.4)]' : 'border-[var(--bd)]'}`}
+            } ${active ? 'border-[var(--gold-d)]' : 'border-[var(--bd)]'}`}
           />
         ) : (
           <div className={`w-full aspect-square border bg-[var(--s2)] flex items-center justify-center ${
             isAlbum ? 'rounded-[3px]' : 'rounded-[6px]'
-          } ${active ? 'border-[rgba(201,168,76,0.4)]' : 'border-[var(--bd)]'}`}>
+          } ${active ? 'border-[var(--gold-d)]' : 'border-[var(--bd)]'}`}>
             {isAlbum && <Disc3 size={28} className="text-[var(--tt)] opacity-30" />}
           </div>
         )}
@@ -107,7 +107,7 @@ const TrackCard = React.memo(function TrackCard({
             title={liked ? 'Remove from favorites' : 'Add to favorites'}
             className="absolute top-1.5 right-1.5 w-6 h-6 rounded-full bg-black/60 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-black/80"
           >
-            <Heart size={10} fill={liked ? '#c9a84c' : 'none'} stroke={liked ? '#c9a84c' : 'white'} />
+            <Heart size={10} fill={liked ? 'var(--gold)' : 'none'} stroke={liked ? 'var(--gold)' : 'white'} />
           </button>
         )}
       </div>

@@ -129,7 +129,7 @@ export const NowPlayingScreen: React.FC<Props> = ({ onClose }) => {
               cursor: 'pointer',
               color: showLyrics ? 'var(--obsidian)' : 'var(--tp)',
               fontFamily: 'var(--fm)',
-              boxShadow: showLyrics ? '0 3px 14px rgba(201,168,76,0.35)' : 'none',
+              boxShadow: showLyrics ? '0 3px 14px var(--gold-d)' : 'none',
             }}>
             {showLyrics ? <Disc3 size={16} /> : <Mic2 size={16} />}
             <span className="text-[11px] font-bold uppercase tracking-[0.08em]">{showLyrics ? 'Artwork' : 'Lyrics'}</span>
@@ -195,7 +195,7 @@ export const NowPlayingScreen: React.FC<Props> = ({ onClose }) => {
             )}
             {!isLive && (
               <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full"
-                style={{ width: 26, height: 26, background: 'var(--obsidian)', border: '2px solid rgba(201,168,76,0.4)' }} />
+                style={{ width: 26, height: 26, background: 'var(--obsidian)', border: '2px solid var(--gold-d)' }} />
             )}
           </div>
         )}
@@ -234,7 +234,7 @@ export const NowPlayingScreen: React.FC<Props> = ({ onClose }) => {
                 <div className="h-full rounded-full absolute left-0 top-0 pointer-events-none"
                   style={{ width: `${fillPct}%`, background: 'linear-gradient(90deg, var(--gold), var(--gold-b))' }} />
                 <div className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 rounded-full opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"
-                  style={{ width: 16, height: 16, background: 'var(--tp)', left: `${fillPct}%`, boxShadow: '0 0 8px rgba(201,168,76,0.5)' }} />
+                  style={{ width: 16, height: 16, background: 'var(--tp)', left: `${fillPct}%`, boxShadow: '0 0 8px var(--gold-d)' }} />
               </div>
               <div className="flex justify-between mt-2">
                 <span className="text-[11px] tabular-nums" style={{ color: 'var(--ts)', fontFamily: 'var(--fm)' }}>{fmt(currentTime)}</span>
@@ -256,7 +256,7 @@ export const NowPlayingScreen: React.FC<Props> = ({ onClose }) => {
           </button>
           <button onClick={togglePlay}
             className="flex items-center justify-center rounded-full hover:scale-105 active:scale-95 transition-transform"
-            style={{ width: 68, height: 68, background: 'linear-gradient(135deg, var(--gold-b), var(--gold))', border: 'none', cursor: 'pointer', color: 'var(--obsidian)', boxShadow: '0 6px 28px rgba(201,168,76,0.4)' }}>
+            style={{ width: 68, height: 68, background: 'linear-gradient(135deg, var(--gold-b), var(--gold))', border: 'none', cursor: 'pointer', color: 'var(--obsidian)', boxShadow: '0 6px 28px var(--gold-d)' }}>
             {isPlaying ? <Pause size={26} fill="currentColor" /> : <Play size={26} fill="currentColor" style={{ marginLeft: 3 }} />}
           </button>
           <button onClick={() => nextTrack()} disabled={isLive}

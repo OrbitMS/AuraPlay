@@ -80,7 +80,7 @@ export const JamendoView: React.FC = () => {
             className="flex-shrink-0 px-3 py-1.5 rounded-full text-[11px] font-medium border transition-all capitalize"
             style={{
               background: tag === t ? 'var(--gold-g)' : 'var(--s1)',
-              borderColor: tag === t ? 'rgba(201,168,76,0.4)' : 'var(--bd)',
+              borderColor: tag === t ? 'var(--gold-d)' : 'var(--bd)',
               color: tag === t ? 'var(--gold)' : 'var(--ts)', cursor: 'pointer',
             }}>{t}</button>
         ))}

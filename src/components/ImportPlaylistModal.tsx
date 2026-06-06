@@ -154,7 +154,7 @@ export const ImportPlaylistModal: React.FC<Props> = ({ onClose, onCreated }) => 
                     className="flex items-center gap-2 px-3.5 py-2 rounded-[8px] text-[12px] font-semibold transition-colors"
                     style={{
                       background: tab === id ? 'var(--gold-g)' : 'var(--s1)',
-                      border: `1px solid ${tab === id ? 'rgba(201,168,76,0.4)' : 'var(--bd)'}`,
+                      border: `1px solid ${tab === id ? 'var(--gold-d)' : 'var(--bd)'}`,
                       color: tab === id ? 'var(--gold)' : 'var(--ts)', cursor: 'pointer',
                     }}>
                     <Icon size={14} /> {label}

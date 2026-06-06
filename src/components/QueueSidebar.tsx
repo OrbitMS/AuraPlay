@@ -278,7 +278,7 @@ const QueueRow: React.FC<RowProps> = ({
       <img
         src={safeImageUrl(track.thumbnail)}
         alt=""
-        className={`w-8 h-8 rounded-[4px] object-cover flex-shrink-0 border ${isActive ? 'border-[rgba(201,168,76,0.3)]' : 'border-[var(--bd)]'}`}
+        className={`w-8 h-8 rounded-[4px] object-cover flex-shrink-0 border ${isActive ? 'border-[var(--gold-d)]' : 'border-[var(--bd)]'}`}
       />
     ) : (
       <div className="w-8 h-8 rounded-[4px] bg-[var(--s2)] flex-shrink-0 border border-[var(--bd)]" />

@@ -4,10 +4,10 @@ import { getDominantColor, lighten } from '../lib/dominantColor';
 
 // Default brand gold (matches App.css :root)
 const DEFAULTS = {
-  '--gold': '#c9a84c',
-  '--gold-b': '#e8c76a',
-  '--gold-d': 'rgba(201,168,76,0.15)',
-  '--gold-g': 'rgba(201,168,76,0.10)',
+  '--gold': '#9db4ff',
+  '--gold-b': '#c8b6ff',
+  '--gold-d': 'rgba(157,180,255,0.16)',
+  '--gold-g': 'rgba(157,180,255,0.12)',
 };
 
 function hexToRgb(hex: string) {
