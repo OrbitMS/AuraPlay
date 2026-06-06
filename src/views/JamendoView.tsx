@@ -5,6 +5,7 @@ import { safeImageUrl } from '../lib/safeUrl';
 import { rankItems } from '../lib/rankResults';
 import { useLikes } from '../hooks/useLikes';
 import { useHistory } from '../hooks/useHistory';
+import { PageHeader } from '../components/PageHeader';
 import { Search, Music2, Loader, Play } from 'lucide-react';
 
 const TAGS = ['pop', 'rock', 'electronic', 'jazz', 'classical', 'hiphop', 'lounge', 'ambient', 'folk', 'metal'];
@@ -40,9 +41,8 @@ export const JamendoView: React.FC = () => {
 
   if (!hasKey) {
     return (
-      <div className="px-[36px] pt-[32px] pb-[40px] w-full">
-        <h1 className="text-[28px] text-[var(--tp)] tracking-[-0.01em]" style={{ fontFamily: 'var(--fd)' }}>Jamendo</h1>
-        <div className="text-[10px] text-[var(--tt)] mt-1.5 tracking-[0.08em] uppercase" style={{ fontFamily: 'var(--fm)' }}>Creative-Commons Music</div>
+      <div className="px-[40px] pt-[36px] pb-[48px] w-full">
+        <PageHeader eyebrow="Discover" title="Jamendo" subtitle="Creative-Commons music" />
         <div className="flex flex-col items-center justify-center mt-24 gap-3 text-center">
           <Music2 size={36} className="text-[var(--tt)] opacity-30" />
           <p className="text-[13px] text-[var(--tt)]">Jamendo needs a free Client ID</p>
@@ -56,11 +56,8 @@ export const JamendoView: React.FC = () => {
   }
 
   return (
-    <div className="px-[36px] pt-[32px] pb-[40px] w-full">
-      <h1 className="text-[28px] text-[var(--tp)] tracking-[-0.01em]" style={{ fontFamily: 'var(--fd)' }}>Jamendo</h1>
-      <div className="text-[10px] text-[var(--tt)] mt-1.5 tracking-[0.08em] uppercase" style={{ fontFamily: 'var(--fm)' }}>
-        Creative-Commons · Free &amp; Legal · Full Tracks
-      </div>
+    <div className="px-[40px] pt-[36px] pb-[48px] w-full">
+      <PageHeader eyebrow="Discover" title="Jamendo" subtitle="Creative-Commons · free & legal · full tracks" />
 
       <form onSubmit={doSearch} className="flex gap-3 mt-7 mb-5" style={{ maxWidth: 560 }}>
         <div className="relative flex-1">

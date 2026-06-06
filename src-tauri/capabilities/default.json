@@ -23,7 +23,13 @@
         },
         {
           "url": "https://open.spotify.com/*"
-        }
+        },
+        { "url": "https://*.ytimg.com/*" },
+        { "url": "https://*.ggpht.com/*" },
+        { "url": "https://i.scdn.co/*" },
+        { "url": "https://*.jamendo.com/*" },
+        { "url": "https://archive.org/*" },
+        { "url": "https://*.archive.org/*" }
       ]
     }
   ]
