@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useContext } from 'react';
-import { searchVideos, type VideoResult } from '../services/youtube';
+import { searchVideos, prefetchVideoStreamUrl, type VideoResult } from '../services/youtube';
 import { AudioContext } from '../context/AudioContext';
 import { PageHeader } from '../components/PageHeader';
 import { VideoPlayer } from '../components/VideoPlayer';
@@ -41,9 +41,14 @@ export const VideosView: React.FC = () => {
   useEffect(() => { run('Official music video'); /* eslint-disable-next-line */ }, []);
 
   const open = (v: VideoResult) => {
-    // Pause audio playback so the two don't overlap
-    if (ctx?.isPlaying) ctx.togglePlay();
+    // Show the video in the transport bar; the <video> element drives playback.
+    ctx?.playVideoTrack({ id: v.id, title: v.title, artist: v.author, thumbnail: v.thumbnail });
     setPlaying(v);
+  };
+
+  const close = () => {
+    ctx?.stopTrack();
+    setPlaying(null);
   };
 
   return (
@@ -95,7 +100,7 @@ export const VideosView: React.FC = () => {
       ) : (
         <div className="grid gap-x-4 gap-y-6" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))' }}>
           {results.map(v => (
-            <div key={v.id} onClick={() => open(v)} className="group cursor-pointer">
+            <div key={v.id} onClick={() => open(v)} onMouseEnter={() => prefetchVideoStreamUrl(v.id)} className="group cursor-pointer">
               <div className="relative w-full rounded-[12px] overflow-hidden" style={{ aspectRatio: '16/9', background: 'var(--s2)' }}>
                 {v.thumbnail
                   ? <img src={safeImageUrl(v.thumbnail)} alt="" className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105" />
@@ -119,7 +124,7 @@ export const VideosView: React.FC = () => {
         </div>
       )}
 
-      {playing && <VideoPlayer video={playing} onClose={() => setPlaying(null)} />}
+      {playing && <VideoPlayer video={playing} onClose={close} />}
     </div>
   );
 };

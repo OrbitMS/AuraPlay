@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { getVideoStreamUrl, type VideoResult } from '../services/youtube';
+import { getVideoStreamUrl, registerVideoElement, unregisterVideoElement, type VideoResult } from '../services/youtube';
 import { X, Loader, AlertCircle } from 'lucide-react';
 
 interface Props {
@@ -20,6 +20,15 @@ export const VideoPlayer: React.FC<Props> = ({ video, onClose }) => {
       .catch(e => { if (!cancelled) setError(e instanceof Error ? e.message : 'Could not load video'); });
     return () => { cancelled = true; };
   }, [video.id]);
+
+  // Register the <video> as the active media target so the bottom transport bar
+  // (and Now Playing) controls it. Unregister on close/unmount.
+  useEffect(() => {
+    const el = videoRef.current;
+    if (!el || !url) return;
+    registerVideoElement(el);
+    return () => unregisterVideoElement(el);
+  }, [url]);
 
   // Esc to close
   useEffect(() => {

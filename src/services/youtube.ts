@@ -506,13 +506,13 @@ function pickMuxedFormat(info: any): any | null {
 }
 
 const videoUrlCache = new Map<string, { url: string; expiresAt: number }>();
+const inFlightVideoUrls = new Map<string, Promise<string>>();
 
-export async function getVideoStreamUrl(videoId: string): Promise<string> {
-  const hit = videoUrlCache.get(videoId);
-  if (hit && hit.expiresAt > Date.now()) return hit.url;
-
+async function resolveVideoUrl(videoId: string): Promise<string> {
   const client = await getStreamClient();
-  const clients: Types.InnerTubeClient[] = ['IOS', 'ANDROID', 'WEB', 'TV', 'ANDROID_VR'];
+  // ANDROID / IOS clients reliably expose progressive (muxed) formats and resolve
+  // fastest; WEB/TV often only carry adaptive streams, so they're tried last.
+  const clients: Types.InnerTubeClient[] = ['ANDROID', 'IOS', 'TV', 'WEB', 'ANDROID_VR'];
   let lastReason = '';
   for (const c of clients) {
     try {
@@ -534,6 +534,27 @@ export async function getVideoStreamUrl(videoId: string): Promise<string> {
   throw new Error(`No playable video stream. Last: ${lastReason}`);
 }
 
+export async function getVideoStreamUrl(videoId: string): Promise<string> {
+  const hit = videoUrlCache.get(videoId);
+  if (hit && hit.expiresAt > Date.now()) return hit.url;
+  // Dedupe concurrent resolutions (e.g. hover-prefetch + click) for the same id.
+  let p = inFlightVideoUrls.get(videoId);
+  if (!p) {
+    p = resolveVideoUrl(videoId).finally(() => inFlightVideoUrls.delete(videoId));
+    inFlightVideoUrls.set(videoId, p);
+  }
+  return p;
+}
+
+// Silently warms the cache so clicking a video card starts playback instantly.
+let activeVideoPrefetches = 0;
+export function prefetchVideoStreamUrl(videoId: string): void {
+  if (videoUrlCache.has(videoId) || inFlightVideoUrls.has(videoId)) return;
+  if (activeVideoPrefetches >= 2) return;
+  activeVideoPrefetches++;
+  getVideoStreamUrl(videoId).catch(() => {}).finally(() => { activeVideoPrefetches--; });
+}
+
 // ============================================================================
 // DIRECT AUDIO STREAMING
 // ============================================================================
@@ -547,6 +568,11 @@ const statusListeners = new Set<(state: AudioState) => void>();
 type ProgressListener = (currentTime: number, duration: number) => void;
 const progressListeners = new Set<ProgressListener>();
 let audioEl: HTMLAudioElement | null = null;
+// When a music video is open, its <video> element is registered here and becomes
+// the active media target so the existing transport (bottom bar / Now Playing)
+// controls the video instead of the audio element.
+let externalEl: HTMLMediaElement | null = null;
+function activeMedia(): HTMLMediaElement | null { return externalEl ?? audioEl; }
 let currentVolume = 0.7;
 // Increments per playTrack() call so a slow stream resolution that finishes
 // after the user already picked another track does not clobber the new one.
@@ -642,10 +668,39 @@ function notifyStatus(state: AudioState) {
 }
 
 function notifyProgress() {
-  if (!audioEl) return;
-  const ct = audioEl.currentTime;
-  const dur = isFinite(audioEl.duration) ? audioEl.duration : 0;
+  const el = activeMedia();
+  if (!el) return;
+  const ct = el.currentTime;
+  const dur = isFinite(el.duration) ? el.duration : 0;
   progressListeners.forEach(cb => cb(ct, dur));
+}
+
+// Shared media-element handlers (named so they can be detached from a video el).
+const onMediaPlaying  = () => notifyStatus('playing');
+const onMediaPause    = (e: Event) => { const el = e.currentTarget as HTMLMediaElement; if (!el.ended) notifyStatus('paused'); };
+const onMediaEnded    = () => notifyStatus('ended');
+const onMediaWaiting  = () => notifyStatus('buffering');
+const onMediaError    = (e: Event) => { console.error('Media element error:', (e.currentTarget as HTMLMediaElement).error); notifyStatus('error'); };
+
+function attachMediaListeners(el: HTMLMediaElement) {
+  el.addEventListener('playing', onMediaPlaying);
+  el.addEventListener('pause', onMediaPause);
+  el.addEventListener('ended', onMediaEnded);
+  el.addEventListener('waiting', onMediaWaiting);
+  el.addEventListener('error', onMediaError);
+  el.addEventListener('timeupdate', notifyProgress);
+  el.addEventListener('durationchange', notifyProgress);
+  el.addEventListener('seeked', notifyProgress);
+}
+function detachMediaListeners(el: HTMLMediaElement) {
+  el.removeEventListener('playing', onMediaPlaying);
+  el.removeEventListener('pause', onMediaPause);
+  el.removeEventListener('ended', onMediaEnded);
+  el.removeEventListener('waiting', onMediaWaiting);
+  el.removeEventListener('error', onMediaError);
+  el.removeEventListener('timeupdate', notifyProgress);
+  el.removeEventListener('durationchange', notifyProgress);
+  el.removeEventListener('seeked', notifyProgress);
 }
 
 function ensureAudio(): HTMLAudioElement {
@@ -653,34 +708,44 @@ function ensureAudio(): HTMLAudioElement {
   const el = new Audio();
   el.preload = 'auto';
   el.volume = currentVolume;
-  el.addEventListener('playing',  () => notifyStatus('playing'));
-  el.addEventListener('pause',    () => { if (!el.ended) notifyStatus('paused'); });
-  el.addEventListener('ended',    () => notifyStatus('ended'));
-  el.addEventListener('waiting',  () => notifyStatus('buffering'));
-  el.addEventListener('error',    () => { console.error('Audio element error:', el.error); notifyStatus('error'); });
-  el.addEventListener('timeupdate',     notifyProgress);
-  el.addEventListener('durationchange', notifyProgress);
-  el.addEventListener('seeked',         notifyProgress);
+  attachMediaListeners(el);
   audioEl = el;
   return el;
+}
+
+/** Register a <video> element as the active media target (music video playback).
+ *  The audio element is paused and the transport now drives the video. */
+export function registerVideoElement(el: HTMLVideoElement): void {
+  audioEl?.pause();
+  externalEl = el;
+  el.volume = currentVolume;
+  attachMediaListeners(el);
+}
+/** Detach the video element and hand control back to the audio element. */
+export function unregisterVideoElement(el: HTMLVideoElement): void {
+  detachMediaListeners(el);
+  try { el.pause(); } catch {}
+  if (externalEl === el) externalEl = null;
 }
 
 /** Subscribe to playback progress. Returns an unsubscribe function. */
 export function subscribeToProgress(cb: ProgressListener): () => void {
   progressListeners.add(cb);
   // Fire immediately with current values so the bar is populated on re-mount
-  if (audioEl) {
-    const dur = isFinite(audioEl.duration) ? audioEl.duration : 0;
-    cb(audioEl.currentTime, dur);
+  const el = activeMedia();
+  if (el) {
+    const dur = isFinite(el.duration) ? el.duration : 0;
+    cb(el.currentTime, dur);
   }
   return () => progressListeners.delete(cb);
 }
 
 /** Seek to an absolute position in seconds. */
 export function seekTo(seconds: number): void {
-  if (!audioEl) return;
-  const dur = isFinite(audioEl.duration) ? audioEl.duration : 0;
-  audioEl.currentTime = Math.max(0, Math.min(seconds, dur));
+  const el = activeMedia();
+  if (!el) return;
+  const dur = isFinite(el.duration) ? el.duration : 0;
+  el.currentTime = Math.max(0, Math.min(seconds, dur));
 }
 
 export function initAudioPlayer(): void {
@@ -864,18 +929,19 @@ export async function playTrack(videoId: string): Promise<void> {
 }
 
 export async function pauseTrack(): Promise<void> {
-  audioEl?.pause();
+  activeMedia()?.pause();
 }
 
 export async function resumeTrack(): Promise<void> {
-  await audioEl?.play();
+  await activeMedia()?.play();
 }
 
 // Accepts a 0-100 volume (matching the app's volume state) and maps it to the
-// HTMLAudioElement's 0-1 range.
+// media element's 0-1 range. Applies to whichever element is active.
 export async function setTrackVolume(volume: number): Promise<void> {
   currentVolume = Math.min(Math.max(volume / 100, 0), 1);
-  if (audioEl) audioEl.volume = currentVolume;
+  const el = activeMedia();
+  if (el) el.volume = currentVolume;
 }
 
 export function subscribeToAudioStatus(callback: (state: string) => void) {
