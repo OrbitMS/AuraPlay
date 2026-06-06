@@ -14,15 +14,17 @@ const DownloadedView = lazy(() => import('./views/DownloadedView').then(m => ({ 
 const PlaylistsView  = lazy(() => import('./views/PlaylistsView').then(m => ({ default: m.PlaylistsView })));
 const ArchiveView    = lazy(() => import('./views/ArchiveView').then(m => ({ default: m.ArchiveView })));
 const JamendoView    = lazy(() => import('./views/JamendoView').then(m => ({ default: m.JamendoView })));
+const StatsView      = lazy(() => import('./views/StatsView').then(m => ({ default: m.StatsView })));
 import { QueueSidebar } from './components/QueueSidebar';
 import { NowPlayingScreen } from './components/NowPlayingScreen';
+import { useStats } from './hooks/useStats';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { UpdateBanner } from './components/UpdateBanner';
 import { useSettings } from './hooks/useSettings';
 import { setAudioQuality } from './services/youtube';
 import './App.css';
 
-type View = 'search' | 'favorites' | 'radio' | 'settings' | 'downloaded' | 'playlists' | 'archive' | 'jamendo';
+type View = 'search' | 'favorites' | 'radio' | 'settings' | 'downloaded' | 'playlists' | 'archive' | 'jamendo' | 'stats';
 
 const clamp = (v: number, lo: number, hi: number) => Math.min(Math.max(v, lo), hi);
 const numFromLS = (key: string, def: number) => {
@@ -40,6 +42,7 @@ function App() {
   const [sidebarWidth, setSidebarWidth] = useState(() => clamp(numFromLS('auraplay_sidebar_w', 268), 210, 460));
   const [playerHeight, setPlayerHeight] = useState(() => clamp(numFromLS('auraplay_player_h', 110), 96, 240));
   const [appVersion, setAppVersion] = useState('');
+  const { summary: statsSummary } = useStats();
 
   useEffect(() => { getVersion().then(setAppVersion).catch(() => {}); }, []);
 
@@ -157,6 +160,9 @@ function App() {
               <NavItem active={view === 'downloaded'} onClick={() => setView('downloaded')}
                 icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="w-[19px] h-[19px] flex-shrink-0"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>}
                 label="Downloaded" />
+              <NavItem active={view === 'stats'} onClick={() => setView('stats')}
+                icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="w-[19px] h-[19px] flex-shrink-0"><line x1="6" y1="20" x2="6" y2="13"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="18" y1="20" x2="18" y2="9"/></svg>}
+                label="Stats" />
             </div>
 
             {/* Bottom */}
@@ -166,6 +172,25 @@ function App() {
                   icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="w-[19px] h-[19px] flex-shrink-0"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/></svg>}
                   label="Settings" />
               </div>
+
+              {/* Stats teaser */}
+              {statsSummary.total > 0 && (
+                <div onClick={() => setView('stats')}
+                  className="lift mx-4 mt-3 p-3.5 rounded-[12px] cursor-pointer flex items-center justify-between"
+                  style={{ background: 'var(--s1)', border: '1px solid var(--bd)' }}>
+                  <div className="min-w-0">
+                    <p className="text-[13px] font-bold" style={{ color: 'var(--gold)' }}>
+                      {statsSummary.total.toLocaleString()} plays
+                    </p>
+                    <p className="text-[10px] truncate mt-0.5" style={{ color: 'var(--ts)', fontFamily: 'var(--fm)' }}>
+                      {statsSummary.topArtist ? `Top · ${statsSummary.topArtist}` : 'View your stats'}
+                    </p>
+                  </div>
+                  <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="var(--gold)" strokeWidth="2" strokeLinecap="round" className="flex-shrink-0">
+                    <line x1="6" y1="20" x2="6" y2="13"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="18" y1="20" x2="18" y2="9"/>
+                  </svg>
+                </div>
+              )}
 
               {/* Support card */}
               <div className="mx-4 mt-3 p-4 rounded-[14px]"
@@ -199,6 +224,7 @@ function App() {
                 {view === 'radio'      && <RadioView />}
                 {view === 'archive'    && <ArchiveView />}
                 {view === 'jamendo'    && <JamendoView />}
+                {view === 'stats'      && <StatsView />}
                 {view === 'settings'  && (
                   <SettingsView
                     quality={settings.audioQuality}
