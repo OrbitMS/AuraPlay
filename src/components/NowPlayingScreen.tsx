@@ -2,7 +2,7 @@ import React, { useContext, useRef, useState, useEffect, useCallback, useMemo } 
 import { AudioContext } from '../context/AudioContext';
 import { subscribeToProgress, seekTo } from '../services/youtube';
 import { getLyrics, activeLineIndex, type LyricsResult } from '../services/lyrics';
-import { Visualizer } from './Visualizer';
+import { Waveform } from './Waveform';
 import { VolumeKnob } from './VolumeKnob';
 import { safeImageUrl } from '../lib/safeUrl';
 import { useLikes } from '../hooks/useLikes';
@@ -98,51 +98,50 @@ export const NowPlayingScreen: React.FC<Props> = ({ onClose }) => {
   const onMove = (e: React.PointerEvent<HTMLDivElement>) => { if (draggingRef.current) seekFromX(e.clientX); };
   const onUp   = (e: React.PointerEvent<HTMLDivElement>) => { draggingRef.current = false; e.currentTarget.releasePointerCapture(e.pointerId); };
 
+  const seekFromPct = (pct: number) => { if (duration > 0) { seekTo((pct / 100) * duration); setCurrentTime((pct / 100) * duration); } };
+
   return (
     <div className="fixed inset-0 z-50 flex flex-col animate-np-in"
-      style={{ background: 'linear-gradient(180deg, #14141a 0%, #0a0a0c 60%, #060608 100%)' }}>
+      style={{ background: 'radial-gradient(125% 90% at 50% 0%, #2b2e35 0%, #20232a 38%, #15171c 72%, #0e0f13 100%)' }}>
 
-      {/* Blurred art backdrop */}
+      {/* slate stone texture + blurred art tint */}
+      <div className="absolute inset-0 pointer-events-none" style={{
+        backgroundImage:
+          'repeating-linear-gradient(115deg, rgba(255,255,255,0.015) 0px, rgba(255,255,255,0.015) 1px, transparent 1px, transparent 4px),' +
+          'repeating-linear-gradient(28deg, rgba(0,0,0,0.05) 0px, rgba(0,0,0,0.05) 1px, transparent 1px, transparent 5px)',
+        mixBlendMode: 'overlay', opacity: 0.6,
+      }} />
       {art && (
-        <div className="absolute inset-0 pointer-events-none" style={{ opacity: 0.18 }}>
-          <img src={art} alt="" className="w-full h-full object-cover" style={{ filter: 'blur(80px) saturate(1.4)' }} />
-          <div className="absolute inset-0" style={{ background: 'linear-gradient(180deg, rgba(10,10,12,0.4) 0%, rgba(6,6,8,0.9) 100%)' }} />
+        <div className="absolute inset-0 pointer-events-none" style={{ opacity: 0.1 }}>
+          <img src={art} alt="" className="w-full h-full object-cover" style={{ filter: 'blur(90px) saturate(1.5)' }} />
         </div>
       )}
 
-      {/* Header */}
-      <div className="relative flex items-center justify-between px-8 pt-7 pb-2">
+      {/* Header — menu · centered title · lyrics toggle */}
+      <div className="relative z-10 flex items-center justify-between px-9 pt-7">
         <button onClick={onClose} title="Collapse (Esc)"
-          className="w-10 h-10 flex items-center justify-center rounded-full transition-colors"
-          style={{ background: 'rgba(255,255,255,0.06)', border: 'none', cursor: 'pointer', color: 'var(--ts)' }}>
-          <ChevronDown size={20} />
+          className="w-11 h-11 flex items-center justify-center rounded-full transition-colors hover:bg-white/[0.06]"
+          style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--ts)' }}>
+          <ChevronDown size={22} />
         </button>
-        <span className="text-[10px] tracking-[0.18em] uppercase" style={{ color: 'var(--tt)', fontFamily: 'var(--fm)' }}>
-          {isLive ? 'Now Streaming' : (showLyrics ? 'Lyrics' : 'Now Playing')}
-        </span>
-        {/* Lyrics / artwork toggle (hidden for radio) — labelled pill */}
+        <div className="text-center min-w-0 px-4">
+          <h1 className="text-[26px] font-semibold truncate" style={{ color: 'var(--tp)', letterSpacing: '0.01em', fontFamily: 'var(--fd)' }}>{title}</h1>
+          <p className="text-[12px] mt-0.5 truncate" style={{ color: 'var(--ts)', fontFamily: 'var(--fm)' }}>{artist}</p>
+        </div>
         {!isLive ? (
           <button onClick={() => setShowLyrics(v => !v)} title={showLyrics ? 'Show artwork' : 'Show lyrics'}
-            className="flex items-center gap-2 h-10 px-4 rounded-full transition-all hover:scale-[1.03] active:scale-95"
-            style={{
-              background: showLyrics ? 'linear-gradient(135deg, var(--gold-b), var(--gold))' : 'rgba(255,255,255,0.08)',
-              border: showLyrics ? 'none' : '1px solid var(--bs)',
-              cursor: 'pointer',
-              color: showLyrics ? 'var(--obsidian)' : 'var(--tp)',
-              fontFamily: 'var(--fm)',
-              boxShadow: showLyrics ? '0 3px 14px var(--gold-d)' : 'none',
-            }}>
-            {showLyrics ? <Disc3 size={16} /> : <Mic2 size={16} />}
-            <span className="text-[11px] font-bold uppercase tracking-[0.08em]">{showLyrics ? 'Artwork' : 'Lyrics'}</span>
+            className="w-11 h-11 flex items-center justify-center rounded-full transition-all hover:bg-white/[0.06]"
+            style={{ background: showLyrics ? 'var(--gold-g)' : 'none', border: 'none', cursor: 'pointer', color: showLyrics ? 'var(--gold)' : 'var(--ts)' }}>
+            {showLyrics ? <Disc3 size={20} /> : <Mic2 size={20} />}
           </button>
-        ) : <div className="w-10" />}
+        ) : <div className="w-11" />}
       </div>
 
-      {/* Main */}
-      <div className="relative flex-1 flex flex-col items-center justify-center px-8 min-h-0">
+      {/* Stage */}
+      <div className="relative z-10 flex-1 min-h-0 px-10">
         {showLyrics && !isLive ? (
           /* ── Lyrics panel ── */
-          <div className="w-full flex-1 min-h-0 overflow-y-auto scrollbar-hide py-10 text-center"
+          <div className="w-full h-full overflow-y-auto scrollbar-hide py-10 text-center mx-auto"
             style={{ maxWidth: 640, maskImage: 'linear-gradient(180deg, transparent, black 12%, black 88%, transparent)', WebkitMaskImage: 'linear-gradient(180deg, transparent, black 12%, black 88%, transparent)' }}>
             {lyricsLoading ? (
               <div className="flex items-center justify-center h-full"><Loader size={22} className="animate-spin text-[var(--gold)]" /></div>
@@ -150,17 +149,10 @@ export const NowPlayingScreen: React.FC<Props> = ({ onClose }) => {
               synced.map((line, i) => {
                 const active = i === activeIdx;
                 return (
-                  <p key={i}
-                    ref={active ? activeLineRef : null}
+                  <p key={i} ref={active ? activeLineRef : null}
                     onClick={() => { seekTo(line.time); setCurrentTime(line.time); }}
                     className="cursor-pointer transition-all duration-200 leading-snug"
-                    style={{
-                      fontSize: active ? 24 : 19,
-                      fontWeight: active ? 700 : 500,
-                      color: active ? 'var(--tp)' : 'rgba(138,135,148,0.5)',
-                      padding: '8px 0',
-                      letterSpacing: '-0.01em',
-                    }}>
+                    style={{ fontSize: active ? 24 : 19, fontWeight: active ? 700 : 500, color: active ? 'var(--tp)' : 'rgba(138,135,148,0.5)', padding: '8px 0', letterSpacing: '-0.01em' }}>
                     {line.text || '♪'}
                   </p>
                 );
@@ -171,119 +163,103 @@ export const NowPlayingScreen: React.FC<Props> = ({ onClose }) => {
               <div className="flex flex-col items-center justify-center h-full gap-2 text-center">
                 <Mic2 size={30} className="text-[var(--tt)] opacity-30" />
                 <p className="text-[13px]" style={{ color: 'var(--tt)' }}>No lyrics found</p>
-                <p className="text-[11px] opacity-60" style={{ color: 'var(--tt)', fontFamily: 'var(--fm)' }}>for this track</p>
               </div>
             )}
           </div>
         ) : (
-          /* ── Artwork (liquid-glass blob) ── */
-          <div className="flex-shrink-0 mb-9 relative grid place-items-center"
-            style={{ width: 'min(46vh, 400px)', height: 'min(46vh, 400px)' }}>
-            {/* iridescent halo behind the blob */}
-            <div className="absolute inset-0 pointer-events-none blob"
-              style={{ background: 'var(--irid)', filter: 'blur(46px)', opacity: 0.45, transform: 'scale(1.05)' }} />
-            <div className={`blob sheen relative w-full h-full ${isPlaying ? 'glow-accent' : ''}`}
-              style={{
-                overflow: 'hidden',
-                border: '1px solid rgba(255,255,255,0.18)',
-                boxShadow: '0 30px 90px rgba(0,0,0,0.6), inset 0 0 0 1px rgba(255,255,255,0.08)',
-              }}>
-              {art ? (
-                <img src={art} alt="" className="w-full h-full object-cover" />
-              ) : (
-                <div className="w-full h-full flex items-center justify-center" style={{ background: 'var(--s2)' }}>
-                  <svg viewBox="0 0 24 24" fill="none" stroke="var(--tt)" strokeWidth="1" className="w-20 h-20">
-                    <circle cx="9" cy="18" r="3"/><circle cx="18" cy="15" r="3"/><line x1="12" y1="18" x2="12" y2="5"/><polyline points="12 5 21 3 21 15"/>
-                  </svg>
+          /* ── Console: blobs + waveform + brass knobs ── */
+          <div className="relative w-full h-full flex items-center justify-center">
+
+            {/* decorative drifting blobs */}
+            <div className="absolute blob pointer-events-none" style={{ width: 150, height: 110, top: '6%', left: '8%', background: 'var(--irid-soft)', opacity: 0.5, filter: 'blur(0.5px)' }} />
+            <div className="absolute blob pointer-events-none" style={{ width: 120, height: 90, bottom: '8%', left: '4%', background: 'var(--irid-soft)', opacity: 0.4 }} />
+            <div className="absolute blob pointer-events-none" style={{ width: 90, height: 70, top: '12%', right: '24%', background: 'var(--irid-soft)', opacity: 0.35 }} />
+
+            {/* centre cluster: artwork blob + waveform */}
+            <div className="flex items-center justify-center gap-2 w-full" style={{ maxWidth: 880 }}>
+              {/* artwork blob */}
+              <div className="relative flex-shrink-0 grid place-items-center" style={{ width: 'min(38vh, 320px)', height: 'min(38vh, 320px)' }}>
+                <div className="absolute inset-0 pointer-events-none blob" style={{ background: 'var(--irid)', filter: 'blur(40px)', opacity: 0.4, transform: 'scale(1.05)' }} />
+                <div className={`blob sheen relative w-full h-full ${isPlaying ? 'glow-accent' : ''}`}
+                  style={{ overflow: 'hidden', border: '1px solid rgba(255,255,255,0.2)', boxShadow: '0 30px 80px rgba(0,0,0,0.55), inset 0 0 0 1px rgba(255,255,255,0.08)' }}>
+                  {art ? (
+                    <img src={art} alt="" className="w-full h-full object-cover" />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center" style={{ background: 'var(--s2)' }}>
+                      <svg viewBox="0 0 24 24" fill="none" stroke="var(--tt)" strokeWidth="1" className="w-20 h-20"><circle cx="9" cy="18" r="3"/><circle cx="18" cy="15" r="3"/><line x1="12" y1="18" x2="12" y2="5"/><polyline points="12 5 21 3 21 15"/></svg>
+                    </div>
+                  )}
+                  <div className="absolute inset-0 pointer-events-none" style={{ background: 'linear-gradient(150deg, rgba(255,255,255,0.24) 0%, transparent 38%)' }} />
                 </div>
-              )}
-              {/* glassy top sheen */}
-              <div className="absolute inset-0 pointer-events-none"
-                style={{ background: 'linear-gradient(150deg, rgba(255,255,255,0.22) 0%, transparent 38%)' }} />
+                {/* like badge */}
+                {currentTrack && (
+                  <button onClick={() => toggleLike(currentTrack)} title={liked ? 'Unlike' : 'Like'}
+                    className="absolute bottom-2 right-3 w-10 h-10 flex items-center justify-center rounded-full glass hover:scale-105 transition-transform"
+                    style={{ border: '1px solid rgba(255,255,255,0.18)', cursor: 'pointer' }}>
+                    <Heart size={18} fill={liked ? 'var(--gold)' : 'none'} stroke={liked ? 'var(--gold)' : 'var(--tp)'} />
+                  </button>
+                )}
+              </div>
+
+              {/* waveform */}
+              <div className="flex-1 min-w-0">
+                <Waveform active={isPlaying} height={240} />
+              </div>
             </div>
+
+            {/* brass knob panel — docked right */}
+            {!isLive && (
+              <div className="absolute right-0 top-1/2 -translate-y-1/2 flex flex-col items-center gap-5 pr-2">
+                <span className="text-[10px] tracking-[0.28em] uppercase" style={{ color: 'var(--gold)', fontFamily: 'var(--fm)' }}>Volume</span>
+                <VolumeKnob value={volume} onChange={setVolume} size={92} label="Level" />
+                <VolumeKnob value={fillPct} onChange={seekFromPct} size={108} label="Track" />
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Transport — thin-line, centered */}
+      <div className="relative z-10 flex flex-col items-center gap-3 pb-10 pt-2">
+        {!isLive ? (
+          <div className="flex items-center gap-3 text-[11px] tabular-nums" style={{ color: 'var(--ts)', fontFamily: 'var(--fm)' }}>
+            <span>{fmt(currentTime)}</span>
+            <div ref={progressBarRef} onPointerDown={onDown} onPointerMove={onMove} onPointerUp={onUp}
+              className="relative rounded-full cursor-pointer group touch-none" style={{ width: 280, height: 4, background: 'rgba(255,255,255,0.1)', touchAction: 'none' }}>
+              <div className="h-full rounded-full absolute left-0 top-0 pointer-events-none" style={{ width: `${fillPct}%`, background: 'var(--irid)' }} />
+            </div>
+            <span>{fmt(duration)}</span>
+          </div>
+        ) : (
+          <div className="flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
+            <span className="text-[11px] font-bold tracking-[0.14em] uppercase text-red-400" style={{ fontFamily: 'var(--fm)' }}>Live</span>
           </div>
         )}
 
-        {/* Title block */}
-        <div className="text-center max-w-[620px] w-full mb-8">
-          <div className="flex items-center justify-center gap-3">
-            <h1 className="text-[34px] font-extrabold truncate" style={{ color: 'var(--tp)', letterSpacing: '-0.025em' }}>{title}</h1>
-            {currentTrack && (
-              <button onClick={() => toggleLike(currentTrack)} title={liked ? 'Unlike' : 'Like'}
-                className="flex-shrink-0 w-9 h-9 flex items-center justify-center rounded-full hover:bg-white/[0.08]"
-                style={{ background: 'none', border: 'none', cursor: 'pointer' }}>
-                <Heart size={20} fill={liked ? 'var(--gold)' : 'none'} stroke={liked ? 'var(--gold)' : 'var(--ts)'} />
-              </button>
-            )}
-          </div>
-          <p className="text-[16px] mt-2 truncate font-medium" style={{ color: 'var(--gold)' }}>
-            {artist}
-          </p>
-        </div>
-
-        {/* Progress */}
-        <div className="w-full max-w-[560px] mb-8">
-          {isLive ? (
-            <div className="flex items-center gap-3">
-              <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
-              <span className="text-[11px] font-bold tracking-[0.12em] uppercase text-red-400" style={{ fontFamily: 'var(--fm)' }}>Live</span>
-              <div className="flex-1 rounded-full overflow-hidden" style={{ height: 6, background: 'var(--s4)' }}>
-                <div className={`h-full rounded-full ${isPlaying ? 'animate-[liveBar_2s_ease-in-out_infinite]' : ''}`} style={{ background: 'var(--gold)', width: isPlaying ? undefined : '100%' }} />
-              </div>
-            </div>
-          ) : (
-            <>
-              <div ref={progressBarRef} onPointerDown={onDown} onPointerMove={onMove} onPointerUp={onUp}
-                className="relative rounded-full cursor-pointer group touch-none" style={{ height: 6, background: 'var(--s4)', touchAction: 'none' }}>
-                <div className="h-full rounded-full absolute left-0 top-0 pointer-events-none"
-                  style={{ width: `${fillPct}%`, background: 'linear-gradient(90deg, var(--gold), var(--gold-b))' }} />
-                <div className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 rounded-full opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"
-                  style={{ width: 16, height: 16, background: 'var(--tp)', left: `${fillPct}%`, boxShadow: '0 0 8px var(--gold-d)' }} />
-              </div>
-              <div className="flex justify-between mt-2">
-                <span className="text-[11px] tabular-nums" style={{ color: 'var(--ts)', fontFamily: 'var(--fm)' }}>{fmt(currentTime)}</span>
-                <span className="text-[11px] tabular-nums" style={{ color: 'var(--ts)', fontFamily: 'var(--fm)' }}>{fmt(duration)}</span>
-              </div>
-            </>
-          )}
-        </div>
-
-        {/* Controls */}
-        <div className="flex items-center gap-8 mb-8">
+        <div className="flex items-center gap-9 mt-1">
           <button onClick={() => setShuffling(!isShuffling)} disabled={isLive}
             style={{ background: 'none', border: 'none', cursor: isLive ? 'default' : 'pointer', color: isShuffling ? 'var(--gold)' : 'var(--ts)', opacity: isLive ? 0.3 : 1 }}>
             <Shuffle size={18} />
           </button>
           <button onClick={prevTrack} disabled={isLive}
             style={{ background: 'none', border: 'none', cursor: isLive ? 'default' : 'pointer', color: 'var(--tp)', opacity: isLive ? 0.3 : 1 }}>
-            <SkipBack size={24} fill="currentColor" />
+            <SkipBack size={22} fill="currentColor" />
           </button>
           <button onClick={togglePlay}
             className="flex items-center justify-center rounded-full hover:scale-105 active:scale-95 transition-transform"
-            style={{ width: 72, height: 72, background: 'var(--irid)', border: 'none', cursor: 'pointer', color: '#0b0d12', boxShadow: '0 8px 34px var(--gold-g), 0 0 0 1px rgba(255,255,255,0.12)' }}>
-            {isPlaying ? <Pause size={26} fill="currentColor" /> : <Play size={26} fill="currentColor" style={{ marginLeft: 3 }} />}
+            style={{ width: 64, height: 64, background: 'rgba(255,255,255,0.05)', border: '1.5px solid rgba(255,255,255,0.55)', cursor: 'pointer', color: 'var(--tp)', boxShadow: '0 0 28px var(--gold-g)' }}>
+            {isPlaying ? <Pause size={24} fill="currentColor" /> : <Play size={24} fill="currentColor" style={{ marginLeft: 3 }} />}
           </button>
           <button onClick={() => nextTrack()} disabled={isLive}
             style={{ background: 'none', border: 'none', cursor: isLive ? 'default' : 'pointer', color: 'var(--tp)', opacity: isLive ? 0.3 : 1 }}>
-            <SkipForward size={24} fill="currentColor" />
+            <SkipForward size={22} fill="currentColor" />
           </button>
           <button onClick={cycleRepeat} disabled={isLive}
             style={{ background: 'none', border: 'none', cursor: isLive ? 'default' : 'pointer', color: repeatMode !== 'off' ? 'var(--gold)' : 'var(--ts)', opacity: isLive ? 0.3 : 1 }}>
             {repeatMode === 'one' ? <Repeat1 size={18} /> : <Repeat size={18} />}
           </button>
         </div>
-
-        {/* Brass volume knob */}
-        {!isLive && (
-          <div className="mb-6">
-            <VolumeKnob value={volume} onChange={setVolume} size={62} />
-          </div>
-        )}
-      </div>
-
-      {/* Visualizer footer */}
-      <div className="relative px-8 pb-8">
-        <Visualizer active={isPlaying} height={64} />
       </div>
     </div>
   );
