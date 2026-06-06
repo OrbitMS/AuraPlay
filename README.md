@@ -103,7 +103,7 @@ AuraPlay is an open-source, local client application designed for educational an
 * **As-Is Provision:** This software is provided "as is," without warranty of any kind, express or implied. In no event shall the authors or copyright holders be liable for any claim, damages, or other liability, whether in an action of contract, tort, or otherwise, arising from, out of, or in connection with the software or the use or other dealings in the software.
 * **User Responsibility:** Users are solely responsible for compliance with local laws and the Terms of Service (ToS) of any third-party streaming platforms or APIs they interact with through AuraPlay. The developers do not condone, encourage, or facilitate copyright infringement.
 
-* ## Intellectual Property & DMCA Compliance
+## Intellectual Property & DMCA Compliance
 
 AuraPlay does not host, store, or redistribute any copyrighted audio files or media streams on its servers or within this repository. 
 
