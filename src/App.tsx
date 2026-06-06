@@ -1,4 +1,6 @@
 import { useState, useEffect, lazy, Suspense } from 'react';
+import { getVersion } from '@tauri-apps/api/app';
+import { openUrl } from '@tauri-apps/plugin-opener';
 import { AudioProvider } from './context/AudioContext';
 import { SearchView } from './views/SearchView';
 import { AudioPlayerBar } from './components/AudioPlayerBar';
@@ -37,6 +39,9 @@ function App() {
   // Resizable panels (persisted)
   const [sidebarWidth, setSidebarWidth] = useState(() => clamp(numFromLS('auraplay_sidebar_w', 268), 210, 460));
   const [playerHeight, setPlayerHeight] = useState(() => clamp(numFromLS('auraplay_player_h', 110), 96, 240));
+  const [appVersion, setAppVersion] = useState('');
+
+  useEffect(() => { getVersion().then(setAppVersion).catch(() => {}); }, []);
 
   useEffect(() => { setAudioQuality(settings.audioQuality); }, [settings.audioQuality]);
 
@@ -100,25 +105,29 @@ function App() {
               <div className="absolute right-[3px] top-0 h-full w-[2px] transition-colors group-hover:bg-[rgba(201,168,76,0.5)]" />
             </div>
 
-            {/* Logo */}
-            <div className="px-6 pt-8 pb-9 flex items-center gap-3.5">
-              <div className="w-12 h-12 rounded-[13px] flex items-center justify-center flex-shrink-0"
-                style={{ background: 'linear-gradient(135deg, rgba(201,168,76,0.22) 0%, rgba(201,168,76,0.08) 100%)', border: '1px solid rgba(201,168,76,0.28)', boxShadow: '0 4px 18px rgba(201,168,76,0.12)' }}>
-                <svg viewBox="0 0 24 24" fill="none" stroke="#c9a84c" strokeWidth="1.6" strokeLinecap="round" className="w-[23px] h-[23px]">
-                  <circle cx="9" cy="18" r="3"/>
-                  <circle cx="18" cy="15" r="3"/>
-                  <line x1="12" y1="18" x2="12" y2="5"/>
-                  <polyline points="12 5 21 2 21 8 12 8"/>
+            {/* Logo — AuraPlay mark (play triangle + aura rings) */}
+            <div className="px-6 pt-9 pb-10 flex items-center gap-3.5">
+              <div className="w-[52px] h-[52px] rounded-[15px] flex items-center justify-center flex-shrink-0"
+                style={{ background: 'radial-gradient(circle at 50% 38%, rgba(201,168,76,0.28) 0%, rgba(201,168,76,0.06) 70%)', border: '1px solid rgba(201,168,76,0.30)', boxShadow: '0 6px 22px rgba(201,168,76,0.16)' }}>
+                <svg viewBox="0 0 24 24" className="w-[30px] h-[30px]">
+                  <circle cx="12" cy="12" r="10" fill="none" stroke="#c9a84c" strokeOpacity="0.28" strokeWidth="1.1"/>
+                  <circle cx="12" cy="12" r="6.6" fill="none" stroke="#c9a84c" strokeOpacity="0.18" strokeWidth="1.1"/>
+                  <path d="M10 8.2 L16.2 12 L10 15.8 Z" fill="#e8c76a" stroke="#e8c76a" strokeWidth="1.4" strokeLinejoin="round"/>
                 </svg>
               </div>
               <div className="flex flex-col leading-none gap-1.5">
-                <span className="text-[23px] text-[var(--tp)] tracking-[-0.02em]" style={{ fontFamily: 'var(--fd)' }}>AuraPlay</span>
-                <span className="text-[9px] text-[var(--tt)] tracking-[0.22em] uppercase" style={{ fontFamily: 'var(--fm)' }}>Studio</span>
+                <span className="text-[25px] font-extrabold tracking-[-0.03em]"
+                  style={{
+                    fontFamily: 'var(--fu)',
+                    background: 'linear-gradient(120deg, #ffffff 0%, #f0e6c8 45%, #c9a84c 100%)',
+                    WebkitBackgroundClip: 'text', backgroundClip: 'text', color: 'transparent',
+                  }}>AuraPlay</span>
+                <span className="text-[9px] tracking-[0.30em] uppercase" style={{ color: 'var(--tt)', fontFamily: 'var(--fm)' }}>Music · Radio</span>
               </div>
             </div>
 
             {/* Discover */}
-            <div className="px-4 mb-6">
+            <div className="px-4 mb-7">
               <SectionLabel>Discover</SectionLabel>
               <NavItem active={view === 'search'} onClick={() => setView('search')}
                 icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="w-[19px] h-[19px] flex-shrink-0"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>}
@@ -134,10 +143,10 @@ function App() {
                 label="Jamendo" />
             </div>
 
-            <div className="h-px mx-5 my-4" style={{ background: 'rgba(255,255,255,0.06)' }} />
+            <div className="h-px mx-5 my-5" style={{ background: 'rgba(255,255,255,0.06)' }} />
 
             {/* Library */}
-            <div className="px-4 mb-6">
+            <div className="px-4 mb-7">
               <SectionLabel>Library</SectionLabel>
               <NavItem active={view === 'favorites'} onClick={() => setView('favorites')}
                 icon={<svg viewBox="0 0 24 24" fill={view === 'favorites' ? '#c9a84c' : 'none'} stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="w-[19px] h-[19px] flex-shrink-0"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78L12 21.23l8.84-8.84a5.5 5.5 0 0 0 0-7.78z"/></svg>}
@@ -151,10 +160,30 @@ function App() {
             </div>
 
             {/* Bottom */}
-            <div className="mt-auto px-4 py-5" style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
-              <NavItem active={view === 'settings'} onClick={() => setView('settings')}
-                icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="w-[19px] h-[19px] flex-shrink-0"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/></svg>}
-                label="Settings" />
+            <div className="mt-auto pt-3" style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+              <div className="px-4">
+                <NavItem active={view === 'settings'} onClick={() => setView('settings')}
+                  icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="w-[19px] h-[19px] flex-shrink-0"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/></svg>}
+                  label="Settings" />
+              </div>
+
+              {/* Support card */}
+              <div className="mx-4 mt-3 p-4 rounded-[14px]"
+                style={{ background: 'linear-gradient(140deg, rgba(201,168,76,0.14) 0%, rgba(201,168,76,0.04) 100%)', border: '1px solid rgba(201,168,76,0.22)' }}>
+                <p className="text-[12px] font-semibold" style={{ color: 'var(--tp)' }}>Enjoying AuraPlay?</p>
+                <p className="text-[10px] mt-0.5" style={{ color: 'var(--ts)', fontFamily: 'var(--fm)' }}>Support independent development</p>
+                <button onClick={() => openUrl('https://ko-fi.com/orbitms').catch(() => {})}
+                  className="mt-3 w-full flex items-center justify-center gap-2 py-2 rounded-[8px] text-[11px] font-bold uppercase tracking-[0.06em] hover:scale-[1.02] active:scale-95 transition-transform"
+                  style={{ background: 'linear-gradient(135deg, var(--gold-b), var(--gold))', color: 'var(--obsidian)', border: 'none', cursor: 'pointer' }}>
+                  <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M12 21s-7-4.35-9.5-8.5C.5 8.5 2.5 5 6 5c2 0 3.2 1.1 4 2 .8-.9 2-2 4-2 3.5 0 5.5 3.5 3.5 7.5C19 16.65 12 21 12 21z"/></svg>
+                  Support on Ko-fi
+                </button>
+              </div>
+
+              {/* Version */}
+              <div className="px-5 py-3 text-[10px]" style={{ color: 'var(--tt)', fontFamily: 'var(--fm)' }}>
+                AuraPlay{appVersion ? ` v${appVersion}` : ''}
+              </div>
             </div>
           </aside>
 
@@ -232,7 +261,7 @@ function NavItem({ active, onClick, icon, label }: {
   return (
     <div
       onClick={onClick}
-      className="flex items-center gap-4 px-3.5 py-[13px] mb-1.5 rounded-[11px] cursor-pointer transition-all duration-150 border-l-[3px]"
+      className="flex items-center gap-4 px-3.5 py-[14px] mb-2 rounded-[11px] cursor-pointer transition-all duration-150 border-l-[3px]"
       style={{
         fontSize: '15px',
         letterSpacing: '0.005em',
