@@ -118,7 +118,7 @@ export const SearchView: React.FC = () => {
               background: 'var(--s1)',
               border: '1px solid var(--bs)',
             }}
-            onFocus={e => { e.currentTarget.style.borderColor = 'rgba(201,168,76,0.45)'; e.currentTarget.style.background = 'var(--s2)'; }}
+            onFocus={e => { e.currentTarget.style.borderColor = 'var(--gold-d)'; e.currentTarget.style.background = 'var(--s2)'; }}
             onBlur={e => { e.currentTarget.style.borderColor = 'var(--bs)'; e.currentTarget.style.background = 'var(--s1)'; }}
           />
         </div>
@@ -136,7 +136,7 @@ export const SearchView: React.FC = () => {
             fontWeight: 700,
             letterSpacing: '0.07em',
             textTransform: 'uppercase',
-            boxShadow: '0 4px 18px rgba(201,168,76,0.3)',
+            boxShadow: '0 4px 18px var(--gold-d)',
           }}
         >
           {isLoading

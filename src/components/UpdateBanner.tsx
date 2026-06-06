@@ -32,7 +32,7 @@ export const UpdateBanner: React.FC = () => {
       style={{
         width: 320,
         background: 'linear-gradient(135deg, rgba(26,26,34,0.97), rgba(18,18,24,0.97))',
-        border: '1px solid rgba(201,168,76,0.3)',
+        border: '1px solid var(--gold-d)',
         borderRadius: 12,
         boxShadow: '0 12px 40px rgba(0,0,0,0.5)',
         backdropFilter: 'blur(12px)',
@@ -40,7 +40,7 @@ export const UpdateBanner: React.FC = () => {
       }}>
       <div className="flex items-start gap-3">
         <div className="w-9 h-9 rounded-[8px] flex items-center justify-center flex-shrink-0"
-          style={{ background: 'rgba(201,168,76,0.15)', border: '1px solid rgba(201,168,76,0.25)' }}>
+          style={{ background: 'var(--gold-d)', border: '1px solid var(--gold-d)' }}>
           <Download size={16} className="text-[var(--gold)]" />
         </div>
         <div className="flex-1 min-w-0">

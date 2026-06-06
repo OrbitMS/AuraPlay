@@ -58,7 +58,7 @@ function StationCard({
       onClick={onPlay}
       className={`lift group flex flex-col gap-2 p-3.5 rounded-[12px] cursor-pointer border ${
         active
-          ? 'border-[rgba(201,168,76,0.4)] bg-[var(--gold-g)]'
+          ? 'border-[var(--gold-d)] bg-[var(--gold-g)]'
           : 'border-[var(--bd)] bg-[var(--s1)] hover:bg-[var(--s2)] hover:border-[var(--bs)]'
       }`}
     >
@@ -189,7 +189,7 @@ export const RadioView: React.FC = () => {
               height: 52, paddingLeft: 46, paddingRight: 16, fontSize: 15,
               letterSpacing: '0.01em', color: 'var(--tp)', background: 'var(--s1)', border: '1px solid var(--bs)',
             }}
-            onFocus={e => { e.currentTarget.style.borderColor = 'rgba(201,168,76,0.45)'; e.currentTarget.style.background = 'var(--s2)'; }}
+            onFocus={e => { e.currentTarget.style.borderColor = 'var(--gold-d)'; e.currentTarget.style.background = 'var(--s2)'; }}
             onBlur={e => { e.currentTarget.style.borderColor = 'var(--bs)'; e.currentTarget.style.background = 'var(--s1)'; }}
           />
         </div>
@@ -200,7 +200,7 @@ export const RadioView: React.FC = () => {
             height: 52, padding: '0 26px', border: 'none',
             background: 'linear-gradient(135deg, var(--gold-b), var(--gold))', color: 'var(--obsidian)',
             fontSize: 13, fontWeight: 700, letterSpacing: '0.07em', textTransform: 'uppercase',
-            boxShadow: '0 4px 18px rgba(201,168,76,0.3)',
+            boxShadow: '0 4px 18px var(--gold-d)',
           }}
         >
           <Search size={16} strokeWidth={2.5} />
@@ -217,7 +217,7 @@ export const RadioView: React.FC = () => {
               onClick={() => setGenre(g.id)}
               className={`flex-shrink-0 px-3 py-1.5 rounded-full text-[11px] font-medium border transition-all ${
                 genre === g.id
-                  ? 'bg-[var(--gold-g)] border-[rgba(201,168,76,0.4)] text-[var(--gold)]'
+                  ? 'bg-[var(--gold-g)] border-[var(--gold-d)] text-[var(--gold)]'
                   : 'bg-[var(--s1)] border-[var(--bd)] text-[var(--ts)] hover:border-[var(--bs)] hover:text-[var(--tp)]'
               }`}
             >

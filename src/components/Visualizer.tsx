@@ -15,7 +15,7 @@ interface Props {
  * would silence playback. The synthetic approach never touches the audio element.
  */
 export const Visualizer: React.FC<Props> = ({
-  active, height = 36, barColor = '#c9a84c', className, style,
+  active, height = 36, barColor = 'var(--gold)', className, style,
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const rafRef = useRef<number>(0);

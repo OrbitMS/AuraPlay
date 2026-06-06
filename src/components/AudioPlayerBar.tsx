@@ -85,13 +85,13 @@ export const AudioPlayerBar: React.FC<Props> = ({ onQueueToggle, queueOpen, onEx
     <div
       onClick={canExpand ? onExpand : undefined}
       title={canExpand ? 'Open Now Playing' : undefined}
-      className="flex items-center select-none flex-shrink-0 z-10 relative"
+      className="glass flex items-center select-none flex-shrink-0 z-10 relative"
       style={{
         height: `${height}px`,
         paddingLeft: '28px',
         paddingRight: '28px',
-        background: 'linear-gradient(180deg, rgba(8,8,11,0.58) 0%, rgba(5,5,7,0.66) 100%)',
-        borderTop: '1px solid rgba(201,168,76,0.12)',
+        background: 'rgba(12,14,20,0.5)',
+        borderTop: '1px solid var(--gold-d)',
         cursor: canExpand ? 'pointer' : 'default',
       }}
     >
@@ -111,7 +111,7 @@ export const AudioPlayerBar: React.FC<Props> = ({ onQueueToggle, queueOpen, onEx
 
       {/* Top gradient accent */}
       <div className="absolute top-0 left-[8%] right-[8%] h-px"
-        style={{ background: 'linear-gradient(90deg, transparent, rgba(201,168,76,0.3), transparent)' }} />
+        style={{ background: 'linear-gradient(90deg, transparent, var(--gold-d), transparent)' }} />
 
       {/* Ambient visualizer strip along the bottom edge */}
       <div className="absolute left-0 right-0 bottom-0 pointer-events-none overflow-hidden"
@@ -132,7 +132,7 @@ export const AudioPlayerBar: React.FC<Props> = ({ onQueueToggle, queueOpen, onEx
           <>
             {/* Radio artwork */}
             <div className="flex-shrink-0 rounded-[10px] overflow-hidden flex items-center justify-center"
-              style={{ width: 62, height: 62, background: 'var(--s2)', border: '1.5px solid rgba(201,168,76,0.2)' }}>
+              style={{ width: 62, height: 62, background: 'var(--s2)', border: '1.5px solid var(--gold-d)' }}>
               {radioStation.favicon
                 ? <img src={safeImageUrl(radioStation.favicon)} alt="" className="w-full h-full object-cover" onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />
                 : <svg viewBox="0 0 24 24" fill="none" stroke="var(--tt)" strokeWidth="1.5" className="w-6 h-6"><path d="M3 18v-6a9 9 0 0 1 18 0v6"/><path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z"/></svg>
@@ -152,14 +152,14 @@ export const AudioPlayerBar: React.FC<Props> = ({ onQueueToggle, queueOpen, onEx
           <>
             {/* Vinyl disc */}
             <div className="flex-shrink-0 rounded-full relative overflow-hidden"
-              style={{ width: 62, height: 62, border: '2px solid rgba(201,168,76,0.3)', boxShadow: isPlaying ? '0 0 20px rgba(201,168,76,0.15)' : 'none', transition: 'box-shadow 0.4s' }}>
+              style={{ width: 62, height: 62, border: '2px solid var(--gold-d)', boxShadow: isPlaying ? '0 0 20px var(--gold-d)' : 'none', transition: 'box-shadow 0.4s' }}>
               <img
                 src={safeImageUrl(currentTrack.thumbnail)}
                 alt=""
                 className={`w-full h-full object-cover rounded-full ${isPlaying ? 'animate-spin-slow' : ''}`}
               />
               <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[11px] h-[11px] rounded-full"
-                style={{ background: 'var(--obsidian)', border: '1.5px solid rgba(201,168,76,0.35)' }} />
+                style={{ background: 'var(--obsidian)', border: '1.5px solid var(--gold-d)' }} />
             </div>
             <div className="flex flex-col min-w-0 gap-1">
               <span className="text-[14px] font-semibold truncate" style={{ color: 'var(--tp)', letterSpacing: '0.005em' }}>{currentTrack.title}</span>
@@ -216,9 +216,9 @@ export const AudioPlayerBar: React.FC<Props> = ({ onQueueToggle, queueOpen, onEx
             className="flex items-center justify-center rounded-full flex-shrink-0 hover:scale-[1.08] active:scale-95 transition-transform"
             style={{
               width: 50, height: 50,
-              background: 'linear-gradient(135deg, var(--gold-b), var(--gold))',
+              background: 'var(--irid)',
               border: 'none', cursor: 'pointer', color: 'var(--obsidian)',
-              boxShadow: '0 4px 20px rgba(201,168,76,0.35), 0 0 0 1px rgba(201,168,76,0.15)',
+              boxShadow: '0 0 26px var(--gold-g), 0 0 0 1px var(--gold-d)',
             }}>
             {isPlaying ? (
               <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" strokeWidth="1.5">
@@ -282,7 +282,7 @@ export const AudioPlayerBar: React.FC<Props> = ({ onQueueToggle, queueOpen, onEx
                 <div className="h-full rounded-full absolute left-0 top-0 pointer-events-none group-hover:opacity-90 transition-opacity"
                   style={{ width: `${fillPct}%`, background: 'linear-gradient(90deg, var(--gold), var(--gold-b))' }} />
                 <div className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 rounded-full shadow-md opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"
-                  style={{ width: 14, height: 14, background: 'var(--tp)', left: `${fillPct}%`, boxShadow: '0 0 6px rgba(201,168,76,0.4)' }} />
+                  style={{ width: 14, height: 14, background: 'var(--tp)', left: `${fillPct}%`, boxShadow: '0 0 6px var(--gold-d)' }} />
               </div>
               <span className="text-[10px] text-[var(--ts)] select-none text-left tabular-nums" style={{ fontFamily: 'var(--fm)', minWidth: 32 }}>
                 {fmt(duration)}
@@ -317,7 +317,7 @@ export const AudioPlayerBar: React.FC<Props> = ({ onQueueToggle, queueOpen, onEx
           className="flex items-center cursor-pointer group touch-none" style={{ width: 90, padding: '8px 0' }}>
           <div ref={volumeBarRef} className="w-full rounded-full relative" style={{ height: 4, background: 'var(--s4)' }}>
             <div className="h-full rounded-full absolute left-0 top-0 group-hover:opacity-100 transition-all"
-              style={{ width: `${volume}%`, background: `rgba(201,168,76,${volume > 0 ? '0.6' : '0'})` }} />
+              style={{ width: `${volume}%`, background: volume > 0 ? 'var(--gold)' : 'transparent' }} />
           </div>
         </div>
 
@@ -333,10 +333,10 @@ export const AudioPlayerBar: React.FC<Props> = ({ onQueueToggle, queueOpen, onEx
             height: 40, padding: '0 14px', border: 'none', cursor: 'pointer',
             background: queueOpen
               ? 'linear-gradient(135deg, var(--gold-b), var(--gold))'
-              : 'rgba(201,168,76,0.14)',
+              : 'var(--gold-d)',
             color: queueOpen ? 'var(--obsidian)' : 'var(--gold)',
-            outline: queueOpen ? 'none' : '1px solid rgba(201,168,76,0.35)',
-            boxShadow: queueOpen ? '0 3px 14px rgba(201,168,76,0.35)' : 'none',
+            outline: queueOpen ? 'none' : '1px solid var(--gold-d)',
+            boxShadow: queueOpen ? '0 3px 14px var(--gold-d)' : 'none',
             fontFamily: 'var(--fm)',
           }}>
           <ListMusic size={17} strokeWidth={2} />

@@ -86,18 +86,18 @@ function App() {
   return (
     <AudioProvider>
       <DynamicTheme />
-      {/* Translucent shell — desktop/acrylic shows through for depth */}
-      <div className="h-screen w-screen overflow-hidden flex flex-col"
-        style={{ background: 'transparent' }}>
+      {/* Ambient slate + iridescent backdrop */}
+      <div className="app-bg" />
+      <div className="h-screen w-screen overflow-hidden flex flex-col relative" style={{ zIndex: 1, background: 'transparent' }}>
 
         <div className="flex flex-1 min-h-0 overflow-hidden">
 
           {/* ── Sidebar ─────────────────────────────────────────────────────── */}
-          <aside className="hidden sm:flex flex-shrink-0 flex-col relative"
+          <aside className="glass hidden sm:flex flex-shrink-0 flex-col relative"
             style={{
               width: sidebarWidth,
-              background: 'linear-gradient(180deg, rgba(12,12,16,0.55) 0%, rgba(9,9,12,0.6) 100%)',
-              borderRight: '1px solid rgba(255,255,255,0.05)',
+              background: 'rgba(20,23,31,0.42)',
+              borderRight: '1px solid rgba(255,255,255,0.07)',
             }}
           >
             {/* Resize handle (right edge) */}
@@ -107,26 +107,21 @@ function App() {
               className="absolute top-0 right-0 h-full z-30 group"
               style={{ width: 8, transform: 'translateX(4px)', cursor: 'col-resize' }}
             >
-              <div className="absolute right-[3px] top-0 h-full w-[2px] transition-colors group-hover:bg-[rgba(201,168,76,0.5)]" />
+              <div className="absolute right-[3px] top-0 h-full w-[2px] transition-colors group-hover:bg-[var(--gold)]" />
             </div>
 
             {/* Logo — AuraPlay mark (play triangle + aura rings) */}
             <div className="px-6 pt-9 pb-10 flex items-center gap-3.5">
-              <div className="w-[52px] h-[52px] rounded-[15px] flex items-center justify-center flex-shrink-0"
-                style={{ background: 'radial-gradient(circle at 50% 38%, rgba(201,168,76,0.28) 0%, rgba(201,168,76,0.06) 70%)', border: '1px solid rgba(201,168,76,0.30)', boxShadow: '0 6px 22px rgba(201,168,76,0.16)' }}>
-                <svg viewBox="0 0 24 24" className="w-[30px] h-[30px]">
-                  <circle cx="12" cy="12" r="10" fill="none" stroke="#c9a84c" strokeOpacity="0.28" strokeWidth="1.1"/>
-                  <circle cx="12" cy="12" r="6.6" fill="none" stroke="#c9a84c" strokeOpacity="0.18" strokeWidth="1.1"/>
-                  <path d="M10 8.2 L16.2 12 L10 15.8 Z" fill="#e8c76a" stroke="#e8c76a" strokeWidth="1.4" strokeLinejoin="round"/>
+              <div className="blob sheen w-[52px] h-[52px] flex items-center justify-center flex-shrink-0 glow-accent"
+                style={{ background: 'var(--irid-soft)', border: '1px solid rgba(255,255,255,0.18)' }}>
+                <svg viewBox="0 0 24 24" className="w-[28px] h-[28px] relative" style={{ zIndex: 1 }}>
+                  <circle cx="12" cy="12" r="10" fill="none" stroke="#ffffff" strokeOpacity="0.45" strokeWidth="1.1"/>
+                  <circle cx="12" cy="12" r="6.6" fill="none" stroke="#ffffff" strokeOpacity="0.3" strokeWidth="1.1"/>
+                  <path d="M10 8.2 L16.2 12 L10 15.8 Z" fill="#ffffff" stroke="#ffffff" strokeWidth="1.4" strokeLinejoin="round"/>
                 </svg>
               </div>
               <div className="flex flex-col leading-none gap-1.5">
-                <span className="text-[25px] font-extrabold tracking-[-0.03em]"
-                  style={{
-                    fontFamily: 'var(--fu)',
-                    background: 'linear-gradient(120deg, #ffffff 0%, #f0e6c8 45%, #c9a84c 100%)',
-                    WebkitBackgroundClip: 'text', backgroundClip: 'text', color: 'transparent',
-                  }}>AuraPlay</span>
+                <span className="irid-text text-[25px] font-extrabold tracking-[-0.03em]" style={{ fontFamily: 'var(--fu)' }}>AuraPlay</span>
                 <span className="text-[9px] tracking-[0.30em] uppercase" style={{ color: 'var(--tt)', fontFamily: 'var(--fm)' }}>Music · Radio</span>
               </div>
             </div>
@@ -154,7 +149,7 @@ function App() {
             <div className="px-4 mb-7">
               <SectionLabel>Library</SectionLabel>
               <NavItem active={view === 'favorites'} onClick={() => setView('favorites')}
-                icon={<svg viewBox="0 0 24 24" fill={view === 'favorites' ? '#c9a84c' : 'none'} stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="w-[19px] h-[19px] flex-shrink-0"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78L12 21.23l8.84-8.84a5.5 5.5 0 0 0 0-7.78z"/></svg>}
+                icon={<svg viewBox="0 0 24 24" fill={view === 'favorites' ? 'var(--gold)' : 'none'} stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="w-[19px] h-[19px] flex-shrink-0"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78L12 21.23l8.84-8.84a5.5 5.5 0 0 0 0-7.78z"/></svg>}
                 label="Favorites" />
               <NavItem active={view === 'playlists'} onClick={() => setView('playlists')}
                 icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="w-[19px] h-[19px] flex-shrink-0"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="14" y2="18"/><circle cx="18" cy="17" r="3"/></svg>}
@@ -196,12 +191,12 @@ function App() {
 
               {/* Support card */}
               <div className="mx-4 mt-3 p-4 rounded-[14px]"
-                style={{ background: 'linear-gradient(140deg, rgba(201,168,76,0.14) 0%, rgba(201,168,76,0.04) 100%)', border: '1px solid rgba(201,168,76,0.22)' }}>
+                style={{ background: 'linear-gradient(140deg, var(--gold-g) 0%, transparent 100%)', border: '1px solid var(--gold-d)' }}>
                 <p className="text-[12px] font-semibold" style={{ color: 'var(--tp)' }}>Enjoying AuraPlay?</p>
                 <p className="text-[10px] mt-0.5" style={{ color: 'var(--ts)', fontFamily: 'var(--fm)' }}>Support independent development</p>
                 <button onClick={() => openUrl('https://ko-fi.com/orbitms').catch(() => {})}
                   className="mt-3 w-full flex items-center justify-center gap-2 py-2 rounded-[8px] text-[11px] font-bold uppercase tracking-[0.06em] hover:scale-[1.02] active:scale-95 transition-transform"
-                  style={{ background: 'linear-gradient(135deg, var(--gold-b), var(--gold))', color: 'var(--obsidian)', border: 'none', cursor: 'pointer' }}>
+                  style={{ background: 'var(--irid)', color: 'var(--obsidian)', border: 'none', cursor: 'pointer' }}>
                   <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M12 21s-7-4.35-9.5-8.5C.5 8.5 2.5 5 6 5c2 0 3.2 1.1 4 2 .8-.9 2-2 4-2 3.5 0 5.5 3.5 3.5 7.5C19 16.65 12 21 12 21z"/></svg>
                   Support on Ko-fi
                 </button>
@@ -216,7 +211,7 @@ function App() {
 
           {/* ── Main Content ─────────────────────────────────────────────────── */}
           <main className="ambient flex-1 h-full overflow-y-auto relative"
-            style={{ background: 'linear-gradient(180deg, rgba(18,18,24,0.40) 0%, rgba(14,14,18,0.50) 100%)' }}>
+            style={{ background: 'transparent' }}>
             <ErrorBoundary label={view} resetKey={view}>
               {view === 'search' && <SearchView />}
               <Suspense fallback={<ViewLoader />}>
@@ -297,7 +292,7 @@ function NavItem({ active, onClick, icon, label }: {
         color: active ? 'var(--gold)' : 'var(--ts)',
         borderLeftColor: active ? 'var(--gold)' : 'transparent',
         background: active
-          ? 'linear-gradient(90deg, rgba(201,168,76,0.14) 0%, rgba(201,168,76,0.04) 100%)'
+          ? 'linear-gradient(90deg, var(--gold-g) 0%, transparent 100%)'
           : 'transparent',
       }}
       onMouseEnter={e => { if (!active) { (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.05)'; (e.currentTarget as HTMLElement).style.color = 'var(--tp)'; } }}
