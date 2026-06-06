@@ -13,7 +13,7 @@
   --color-gold: #c9a84c;
   --color-gold-b: #e8c76a;
   
-  --font-display: 'DM Serif Display', serif;
+  --font-display: 'Syne', sans-serif;
   --font-sans: 'Syne', sans-serif;
   --font-mono: 'DM Mono', monospace;
 }
@@ -42,7 +42,7 @@
   --tp: #f4f1ec;
   --ts: #b0adba;
   --tt: #807d8c;
-  --fd: 'DM Serif Display', serif;
+  --fd: 'Syne', sans-serif;
   --fu: 'Syne', sans-serif;
   --fm: 'DM Mono', monospace;
 }
@@ -78,6 +78,10 @@ html, body, #root {
 ::-webkit-scrollbar-track  { background: transparent; }
 ::-webkit-scrollbar-thumb  { background: rgba(255,255,255,0.1); border-radius: 999px; }
 ::-webkit-scrollbar-thumb:hover { background: rgba(201,168,76,0.3); }
+
+/* Modern heading weight — Syne reads strong/clean when bold + tight */
+h1 { font-weight: 800; letter-spacing: -0.025em; }
+h2 { font-weight: 700; letter-spacing: -0.015em; }
 
 /* All interactive elements get smooth transitions by default */
 button { transition: color 0.15s, background 0.15s, opacity 0.15s, transform 0.1s; }
