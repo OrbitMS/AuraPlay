@@ -448,6 +448,93 @@ export async function searchMusic(query: string): Promise<SearchResult[]> {
 }
 
 // ============================================================================
+// MUSIC VIDEOS  (search + muxed video+audio stream)
+// ============================================================================
+export type VideoResult = {
+  id: string;
+  title: string;
+  author: string;
+  thumbnail: string;
+  duration?: number;   // seconds
+  views?: number;
+  published?: string;
+};
+
+const videoSearchCache = new Map<string, { at: number; data: VideoResult[] }>();
+
+export async function searchVideos(query: string): Promise<VideoResult[]> {
+  const key = query.trim().toLowerCase();
+  const cached = videoSearchCache.get(key);
+  if (cached && Date.now() - cached.at < SEARCH_TTL_MS) return cached.data;
+
+  const client = await getClient();
+  const res: any = await client.search(query, { type: 'video' });
+  const nodes: any[] = res?.results ?? res?.videos ?? res?.contents ?? [];
+
+  const mapped: VideoResult[] = nodes
+    .filter((n: any) => n && (String(n.type || '').toLowerCase().includes('video')) && (n.id || n.video_id))
+    .map((n: any) => {
+      const dur = typeof n.duration === 'object' ? n.duration?.seconds : (typeof n.duration === 'number' ? n.duration : undefined);
+      const thumbs = n.thumbnails ?? n.thumbnail?.contents ?? [];
+      return {
+        id: n.id || n.video_id,
+        title: n.title?.text ?? (typeof n.title === 'string' ? n.title : 'Untitled'),
+        author: n.author?.name ?? n.author?.text ?? 'Unknown',
+        thumbnail: thumbs?.[0]?.url ?? '',
+        duration: dur,
+        views: parseCount(n.view_count ?? n.short_view_count),
+        published: n.published?.text,
+      };
+    });
+
+  videoSearchCache.set(key, { at: Date.now(), data: mapped });
+  return mapped;
+}
+
+// Picks the best progressive (muxed video+audio) format. Muxed tops out at 720p
+// (itag 22) — fine for in-app video; adaptive 1080p+ would need separate audio.
+function pickMuxedFormat(info: any): any | null {
+  const fmts: any[] = info?.streaming_data?.formats ?? [];
+  const muxed = fmts.filter(f =>
+    f.has_video && f.has_audio && (f.url || f.signature_cipher || f.cipher),
+  );
+  if (muxed.length === 0) {
+    try { return info.chooseFormat({ type: 'video+audio', quality: 'best' }); } catch { return null; }
+  }
+  muxed.sort((a, b) => (b.height ?? b.width ?? 0) - (a.height ?? a.width ?? 0));
+  return muxed[0];
+}
+
+const videoUrlCache = new Map<string, { url: string; expiresAt: number }>();
+
+export async function getVideoStreamUrl(videoId: string): Promise<string> {
+  const hit = videoUrlCache.get(videoId);
+  if (hit && hit.expiresAt > Date.now()) return hit.url;
+
+  const client = await getStreamClient();
+  const clients: Types.InnerTubeClient[] = ['IOS', 'ANDROID', 'WEB', 'TV', 'ANDROID_VR'];
+  let lastReason = '';
+  for (const c of clients) {
+    try {
+      const info = await client.getInfo(videoId, { client: c });
+      if (!info.streaming_data) { lastReason = `${c}: no streaming_data`; continue; }
+      const fmt = pickMuxedFormat(info);
+      if (!fmt) { lastReason = `${c}: no muxed format`; continue; }
+      const url = await fmt.decipher(client.session.player);
+      if (url) {
+        console.log(`[video] ${c}: resolved itag=${(fmt as any).itag} ${(fmt as any).height}p`);
+        videoUrlCache.set(videoId, { url, expiresAt: Date.now() + URL_CACHE_TTL_MS });
+        return url;
+      }
+      lastReason = `${c}: empty URL`;
+    } catch (err) {
+      lastReason = `${c}: ${err instanceof Error ? err.message : String(err)}`;
+    }
+  }
+  throw new Error(`No playable video stream. Last: ${lastReason}`);
+}
+
+// ============================================================================
 // DIRECT AUDIO STREAMING
 // ============================================================================
 // Playback resolves a direct audio stream URL with youtubei.js and plays it
