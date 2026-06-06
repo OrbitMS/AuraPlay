@@ -19,6 +19,7 @@ import {
   deleteDownload,
 } from '../services/offline';
 import { useHistory } from '../hooks/useHistory';
+import { recordPlay } from '../hooks/useStats';
 import { getNextIndex, cycleRepeatMode, type RepeatMode } from '../lib/queue';
 
 export interface Track {
@@ -233,6 +234,7 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       setCurrentIndex(0);
     }
     setIsPlaying(true);
+    recordPlay(track);
     if (track.url) playDirectStream(track.url).catch(err => console.error("Playback failed:", err));
     else nativePlayTrack(track.id).catch(err => console.error("Playback failed:", err));
   };
@@ -260,6 +262,7 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     if (track.url) {
       setCurrentIndex(index);
       setIsPlaying(true);
+      recordPlay(track);
       playDirectStream(track.url).catch(err => console.error("Playback failed:", err));
       return;
     }
@@ -275,6 +278,7 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
     setCurrentIndex(index);
     setIsPlaying(true);
+    recordPlay(track);
     nativePlayTrack(track.id).catch(err => console.error("Playback failed:", err));
   };
 
