@@ -3,6 +3,7 @@ import { AudioContext } from '../context/AudioContext';
 import { subscribeToProgress, seekTo } from '../services/youtube';
 import { getLyrics, activeLineIndex, type LyricsResult } from '../services/lyrics';
 import { Visualizer } from './Visualizer';
+import { VolumeKnob } from './VolumeKnob';
 import { safeImageUrl } from '../lib/safeUrl';
 import { useLikes } from '../hooks/useLikes';
 import { ChevronDown, Heart, Shuffle, SkipBack, SkipForward, Play, Pause, Repeat, Repeat1, Mic2, Disc3, Loader } from 'lucide-react';
@@ -83,7 +84,7 @@ export const NowPlayingScreen: React.FC<Props> = ({ onClose }) => {
   if (!ctx) return null;
   const {
     currentTrack, radioStation, isPlaying, togglePlay, nextTrack, prevTrack,
-    isShuffling, repeatMode, setShuffling, cycleRepeat,
+    isShuffling, repeatMode, setShuffling, cycleRepeat, volume, setVolume,
   } = ctx;
 
   const isLive = radioStation !== null;
@@ -175,28 +176,31 @@ export const NowPlayingScreen: React.FC<Props> = ({ onClose }) => {
             )}
           </div>
         ) : (
-          /* ── Artwork ── */
-          <div className="flex-shrink-0 mb-9 relative"
-            style={{
-              width: 'min(46vh, 400px)', height: 'min(46vh, 400px)',
-              borderRadius: isLive ? 20 : '50%',
-              overflow: 'hidden',
-              border: '1px solid var(--gold-d)',
-              boxShadow: '0 30px 90px rgba(0,0,0,0.65), 0 0 80px var(--gold-g)',
-            }}>
-            {art ? (
-              <img src={art} alt="" className={`w-full h-full object-cover ${!isLive && isPlaying ? 'animate-spin-slow' : ''}`} />
-            ) : (
-              <div className="w-full h-full flex items-center justify-center" style={{ background: 'var(--s2)' }}>
-                <svg viewBox="0 0 24 24" fill="none" stroke="var(--tt)" strokeWidth="1" className="w-20 h-20">
-                  <circle cx="9" cy="18" r="3"/><circle cx="18" cy="15" r="3"/><line x1="12" y1="18" x2="12" y2="5"/><polyline points="12 5 21 3 21 15"/>
-                </svg>
-              </div>
-            )}
-            {!isLive && (
-              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full"
-                style={{ width: 26, height: 26, background: 'var(--obsidian)', border: '2px solid var(--gold-d)' }} />
-            )}
+          /* ── Artwork (liquid-glass blob) ── */
+          <div className="flex-shrink-0 mb-9 relative grid place-items-center"
+            style={{ width: 'min(46vh, 400px)', height: 'min(46vh, 400px)' }}>
+            {/* iridescent halo behind the blob */}
+            <div className="absolute inset-0 pointer-events-none blob"
+              style={{ background: 'var(--irid)', filter: 'blur(46px)', opacity: 0.45, transform: 'scale(1.05)' }} />
+            <div className={`blob sheen relative w-full h-full ${isPlaying ? 'glow-accent' : ''}`}
+              style={{
+                overflow: 'hidden',
+                border: '1px solid rgba(255,255,255,0.18)',
+                boxShadow: '0 30px 90px rgba(0,0,0,0.6), inset 0 0 0 1px rgba(255,255,255,0.08)',
+              }}>
+              {art ? (
+                <img src={art} alt="" className="w-full h-full object-cover" />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center" style={{ background: 'var(--s2)' }}>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="var(--tt)" strokeWidth="1" className="w-20 h-20">
+                    <circle cx="9" cy="18" r="3"/><circle cx="18" cy="15" r="3"/><line x1="12" y1="18" x2="12" y2="5"/><polyline points="12 5 21 3 21 15"/>
+                  </svg>
+                </div>
+              )}
+              {/* glassy top sheen */}
+              <div className="absolute inset-0 pointer-events-none"
+                style={{ background: 'linear-gradient(150deg, rgba(255,255,255,0.22) 0%, transparent 38%)' }} />
+            </div>
           </div>
         )}
 
@@ -256,7 +260,7 @@ export const NowPlayingScreen: React.FC<Props> = ({ onClose }) => {
           </button>
           <button onClick={togglePlay}
             className="flex items-center justify-center rounded-full hover:scale-105 active:scale-95 transition-transform"
-            style={{ width: 68, height: 68, background: 'linear-gradient(135deg, var(--gold-b), var(--gold))', border: 'none', cursor: 'pointer', color: 'var(--obsidian)', boxShadow: '0 6px 28px var(--gold-d)' }}>
+            style={{ width: 72, height: 72, background: 'var(--irid)', border: 'none', cursor: 'pointer', color: '#0b0d12', boxShadow: '0 8px 34px var(--gold-g), 0 0 0 1px rgba(255,255,255,0.12)' }}>
             {isPlaying ? <Pause size={26} fill="currentColor" /> : <Play size={26} fill="currentColor" style={{ marginLeft: 3 }} />}
           </button>
           <button onClick={() => nextTrack()} disabled={isLive}
@@ -268,6 +272,13 @@ export const NowPlayingScreen: React.FC<Props> = ({ onClose }) => {
             {repeatMode === 'one' ? <Repeat1 size={18} /> : <Repeat size={18} />}
           </button>
         </div>
+
+        {/* Brass volume knob */}
+        {!isLive && (
+          <div className="mb-6">
+            <VolumeKnob value={volume} onChange={setVolume} size={62} />
+          </div>
+        )}
       </div>
 
       {/* Visualizer footer */}
