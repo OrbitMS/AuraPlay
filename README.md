@@ -4,9 +4,14 @@
 
 Finally, bring the power of Music to your workstation. Enjoy the seamless music experience you love — now native to Windows.
 
-<img width="960" height="487" alt="AuraPlay" src="https://github.com/user-attachments/assets/cd07e3b0-3f48-4c59-a430-740b69d2e2bd" />
+Download latest Version on the right (.exe) -> install and enjoy!
 
 ---
+
+<img width="960" height="487" alt="image" src="https://github.com/user-attachments/assets/f977536a-66e0-42fd-83a1-ed62c59c7550" /> <img width="960" height="487" alt="image" src="https://github.com/user-attachments/assets/c5b920d2-67d3-40b9-bbb2-bd188a998111" />
+
+
+
 
 ## ✨ Features
 
@@ -21,45 +26,6 @@ Finally, bring the power of Music to your workstation. Enjoy the seamless music 
 - **Favorites** — like any track, kept in a dedicated list
 - **Downloads** — save songs for true offline playback, browsable under *Downloaded*
 - **Listening history** — feeds your recommendations
-🎧 AuraPlay — Highlights
-🔍 Search any song, instantly
-Find millions of tracks, albums, and artists in one search bar.
-
-🚫 No ads, ever
-Just music — no interruptions, no commercials.
-
-🎵 Crystal-clear sound
-Plays the highest-quality audio available, automatically.
-
-🏠 Music made for you
-A home page that learns your taste — trending hits, new releases, and picks based on what you listen to.
-
-📻 Hundreds of live radio stations
-Tune into ad-free stations across 22 genres — Pop, Jazz, Lo-Fi, Classical, and more.
-
-⬇️ Listen offline
-Download your favorite songs and play them anywhere, even without internet.
-
-❤️ Build your collection
-Like songs to save them, and keep everything in one tidy library.
-
-🎤 Sing along with synced lyrics
-Lyrics scroll in time with the music on the full-screen player.
-
-📃 Up Next, handled for you
-The queue keeps the music going with songs you'll love — drag to reorder anytime.
-
-🪟 Stays out of your way
-Closes to the system tray and keeps playing in the background while you work.
-
-✨ Beautiful, modern design
-A sleek, glassy interface that puts your music front and center — resize it to fit your screen.
-
-🔄 Always up to date
-Updates itself automatically — you'll always have the latest version.
-
-
-<img width="960" height="487" alt="image" src="https://github.com/user-attachments/assets/cd07e3b0-3f48-4c59-a430-740b69d2e2bd" />
 
 ### Radio
 - **Hundreds of ad-free live stations** from [Radio Browser](https://www.radio-browser.info), across 22 genres, with name search
@@ -129,5 +95,30 @@ git push origin v0.1.1
 
 If you enjoy AuraPlay, consider supporting development on [Ko-fi](https://ko-fi.com/orbitms).
 
-## License
-[MIT](LICENSE)
+## Legal Disclaimer
+
+AuraPlay is an open-source, local client application designed for educational and personal entertainment purposes. 
+
+* **No Affiliation:** AuraPlay is not affiliated with, authorized, maintained, or endorsed by any commercial music streaming services (such as Spotify, Apple Music, YouTube Music, etc.). All product and company names are trademarks™ or registered® trademarks of their respective holders.
+* **As-Is Provision:** This software is provided "as is," without warranty of any kind, express or implied. In no event shall the authors or copyright holders be liable for any claim, damages, or other liability, whether in an action of contract, tort, or otherwise, arising from, out of, or in connection with the software or the use or other dealings in the software.
+* **User Responsibility:** Users are solely responsible for compliance with local laws and the Terms of Service (ToS) of any third-party streaming platforms or APIs they interact with through AuraPlay. The developers do not condone, encourage, or facilitate copyright infringement.
+
+## Intellectual Property & DMCA Compliance
+
+AuraPlay does not host, store, or redistribute any copyrighted audio files or media streams on its servers or within this repository. 
+
+If you are a copyright owner or an agent thereof and believe that any content made available through this client infringes upon your copyrights, please submit a formal takedown request via GitHub Issues or contact [Your Contact Email/Method] containing the necessary information outlined by the Digital Millennium Copyright Act (DMCA).
+
+## License and Third-Party Dependencies
+
+AuraPlay is distributed under the [Insert your License, e.g., MIT License / Apache 2.0]. See the `LICENSE` file for full details.
+
+This application utilizes several open-source libraries, including but not limited to:
+* **cpal** (Apache 2.0 / MIT) - Cross-platform audio I/O library.
+* **symphonia** (MPL 2.0) - Pure Rust audio decoding framework.
+* **windows-rs** (MIT / Apache 2.0) - Microsoft Windows API bindings.
+
+Please refer to the respective upstream repositories for their specific licensing terms and copyright notices.
+
+## Privacy Policy
+AuraPlay is built with privacy in mind. It does not collect, store, or transmit any personal data, usage telemetry, or listening history to the developers or any third-party analytics servers. All application configuration and streaming tokens are stored locally on your machine.
