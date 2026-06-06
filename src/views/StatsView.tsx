@@ -2,6 +2,7 @@ import React, { useContext } from 'react';
 import { AudioContext, type Track } from '../context/AudioContext';
 import { useStats } from '../hooks/useStats';
 import { safeImageUrl } from '../lib/safeUrl';
+import { PageHeader } from '../components/PageHeader';
 import { BarChart3, Trash2, Music2 } from 'lucide-react';
 
 export const StatsView: React.FC = () => {
@@ -21,22 +22,19 @@ export const StatsView: React.FC = () => {
   const maxArtist = artists[0]?.count ?? 1;
 
   return (
-    <div className="px-[36px] pt-[32px] pb-[40px] w-full">
-      <div className="flex items-start justify-between">
-        <div>
-          <h1 className="text-[28px] text-[var(--tp)] tracking-[-0.01em] leading-[1.1]" style={{ fontFamily: 'var(--fd)' }}>Your Stats</h1>
-          <div className="text-[10px] text-[var(--tt)] mt-1.5 tracking-[0.08em] uppercase" style={{ fontFamily: 'var(--fm)' }}>
-            {since ? `Listening since ${since}` : 'Your listening at a glance'}
-          </div>
-        </div>
-        {summary.total > 0 && (
+    <div className="px-[40px] pt-[36px] pb-[48px] w-full">
+      <PageHeader
+        eyebrow="Library"
+        title="Your Stats"
+        subtitle={since ? `Listening since ${since}` : 'Your listening at a glance'}
+        actions={summary.total > 0 ? (
           <button onClick={() => { if (confirm('Reset all listening stats?')) clearStats(); }}
-            className="flex items-center gap-1.5 px-3.5 py-2 rounded-[8px] text-[11px] transition-colors hover:text-red-400"
-            style={{ background: 'var(--s1)', border: '1px solid var(--bd)', color: 'var(--ts)', cursor: 'pointer' }}>
-            <Trash2 size={13} /> Reset
+            className="flex items-center gap-1.5 px-4 py-2.5 rounded-full text-[12px] transition-colors hover:text-red-400"
+            style={{ background: 'var(--s2)', border: '1px solid var(--bd)', color: 'var(--ts)', cursor: 'pointer' }}>
+            <Trash2 size={14} /> Reset
           </button>
-        )}
-      </div>
+        ) : undefined}
+      />
 
       {summary.total === 0 ? (
         <div className="flex flex-col items-center justify-center mt-24 gap-3 text-center">
