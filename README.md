@@ -12,6 +12,7 @@ Download latest Version on the right (.exe) -> install and enjoy!
 
 
 
+
 ## ✨ Features
 
 ### Music
@@ -25,6 +26,7 @@ Download latest Version on the right (.exe) -> install and enjoy!
 - **Favorites** — like any track, kept in a dedicated list
 - **Downloads** — save songs for true offline playback, browsable under *Downloaded*
 - **Listening history** — feeds your recommendations
+  
 🎧 AuraPlay — Highlights
 🔍 Search any song, instantly
 Find millions of tracks, albums, and artists in one search bar.
