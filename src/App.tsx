@@ -15,6 +15,7 @@ const PlaylistsView  = lazy(() => import('./views/PlaylistsView').then(m => ({ d
 const ArchiveView    = lazy(() => import('./views/ArchiveView').then(m => ({ default: m.ArchiveView })));
 const JamendoView    = lazy(() => import('./views/JamendoView').then(m => ({ default: m.JamendoView })));
 const StatsView      = lazy(() => import('./views/StatsView').then(m => ({ default: m.StatsView })));
+const VideosView     = lazy(() => import('./views/VideosView').then(m => ({ default: m.VideosView })));
 import { QueueSidebar } from './components/QueueSidebar';
 import { NowPlayingScreen } from './components/NowPlayingScreen';
 import { DynamicTheme } from './components/DynamicTheme';
@@ -25,7 +26,7 @@ import { useSettings } from './hooks/useSettings';
 import { setAudioQuality } from './services/youtube';
 import './App.css';
 
-type View = 'search' | 'favorites' | 'radio' | 'settings' | 'downloaded' | 'playlists' | 'archive' | 'jamendo' | 'stats';
+type View = 'search' | 'videos' | 'favorites' | 'radio' | 'settings' | 'downloaded' | 'playlists' | 'archive' | 'jamendo' | 'stats';
 
 const clamp = (v: number, lo: number, hi: number) => Math.min(Math.max(v, lo), hi);
 const numFromLS = (key: string, def: number) => {
@@ -132,6 +133,9 @@ function App() {
               <NavItem active={view === 'search'} onClick={() => setView('search')}
                 icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="w-[19px] h-[19px] flex-shrink-0"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>}
                 label="Search Music" />
+              <NavItem active={view === 'videos'} onClick={() => setView('videos')}
+                icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="w-[19px] h-[19px] flex-shrink-0"><rect x="2" y="4" width="20" height="16" rx="3"/><polygon points="10 9 15 12 10 15" fill="currentColor" stroke="none"/></svg>}
+                label="Music Videos" />
               <NavItem active={view === 'radio'} onClick={() => setView('radio')}
                 icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="w-[19px] h-[19px] flex-shrink-0"><path d="M3 18v-6a9 9 0 0 1 18 0v6"/><path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z"/></svg>}
                 label="Radio" />
@@ -218,6 +222,7 @@ function App() {
                 {view === 'favorites'  && <FavoritesView />}
                 {view === 'playlists'  && <PlaylistsView />}
                 {view === 'downloaded' && <DownloadedView />}
+                {view === 'videos'     && <VideosView />}
                 {view === 'radio'      && <RadioView />}
                 {view === 'archive'    && <ArchiveView />}
                 {view === 'jamendo'    && <JamendoView />}

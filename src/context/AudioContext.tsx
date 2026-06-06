@@ -47,6 +47,9 @@ interface AudioContextType {
   cycleRepeat: () => void;
   setShuffling: (val: boolean) => void;
   playTrack: (track: Track, completePlaylist?: Track[]) => void;
+  /** Show a music video in the transport without starting the audio pipeline.
+   *  Playback is driven by the registered <video> element (VideoPlayer). */
+  playVideoTrack: (track: Track) => void;
   playAtIndex: (index: number) => void;
   togglePlay: () => void;
   nextTrack: () => void;
@@ -239,6 +242,19 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     else nativePlayTrack(track.id).catch(err => console.error("Playback failed:", err));
   };
 
+  const playVideoTrack = (track: Track) => {
+    skipCountRef.current = 0;
+    setRadioStation(null);
+    setAutoQueueStart(null);
+    isFetchingAutoRef.current = false;
+    setQueue([track]);
+    setCurrentIndex(0);
+    setIsPlaying(true);
+    recordPlay(track);
+    // No nativePlayTrack(): the <video> element drives playback and is
+    // registered with the service so the transport controls it.
+  };
+
   const togglePlay = async () => {
     // Works for both regular tracks and radio (radio has no currentTrack)
     if (!currentTrack && !radioStation) return;
@@ -373,6 +389,7 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       cycleRepeat,
       setShuffling: setIsShuffling,
       playTrack,
+      playVideoTrack,
       playAtIndex,
       togglePlay,
       nextTrack,
