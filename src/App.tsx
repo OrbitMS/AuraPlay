@@ -278,7 +278,7 @@ function App() {
 function VideoOverlayHost({ playerHeight }: { playerHeight: number }) {
   const ctx = useContext(AudioContext);
   if (!ctx?.videoOverlay) return null;
-  return <VideoPlayer video={ctx.videoOverlay} bottomOffset={playerHeight} onClose={ctx.closeVideo} />;
+  return <VideoPlayer key={ctx.videoOverlay.id} video={ctx.videoOverlay} bottomOffset={playerHeight} onClose={ctx.closeVideo} />;
 }
 
 /* ── Reusable sidebar primitives ──────────────────────────────────────────── */

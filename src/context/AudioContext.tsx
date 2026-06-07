@@ -52,7 +52,7 @@ interface AudioContextType {
   playAtIndex: (index: number) => void;
   /** Music-video overlay state + controls. */
   videoOverlay: VideoResult | null;
-  openVideo: (v: VideoResult) => void;
+  openVideo: (v: VideoResult, list?: VideoResult[]) => void;
   closeVideo: () => void;
   togglePlay: () => void;
   nextTrack: () => void;
@@ -90,6 +90,8 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [radioStation, setRadioStation] = useState<RadioStation | null>(null);
   const [downloaded, setDownloaded] = useState<OfflineTrack[]>([]);
   const [videoOverlay, setVideoOverlay] = useState<VideoResult | null>(null);
+  const [videoQueue, setVideoQueue] = useState<VideoResult[]>([]);
+  const [videoIndex, setVideoIndex] = useState(-1);
   const { push: pushHistory } = useHistory();
 
   const currentTrack = currentIndex >= 0 && currentIndex < queue.length ? queue[currentIndex] : null;
@@ -249,13 +251,16 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     else nativePlayTrack(track.id).catch(err => console.error("Playback failed:", err));
   };
 
-  const openVideo = (v: VideoResult) => {
+  const openVideo = (v: VideoResult, list?: VideoResult[]) => {
     // Stop any audio immediately so the song and video never play in parallel.
     pauseTrack().catch(() => {});
     skipCountRef.current = 0;
     setRadioStation(null);
     setAutoQueueStart(null);
     isFetchingAutoRef.current = false;
+    const q = list && list.length ? list : [v];
+    setVideoQueue(q);
+    setVideoIndex(Math.max(0, q.findIndex(x => x.id === v.id)));
     const track: Track = { id: v.id, title: v.title, artist: v.author, thumbnail: v.thumbnail };
     setQueue([track]);
     setCurrentIndex(0);
@@ -266,8 +271,17 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     // registered with the service so the transport controls it.
   };
 
+  // Jump to another video in the current video list (wraps around).
+  const openVideoAt = (i: number) => {
+    if (videoQueue.length === 0) return;
+    const ni = ((i % videoQueue.length) + videoQueue.length) % videoQueue.length;
+    openVideo(videoQueue[ni], videoQueue);
+  };
+
   const closeVideo = () => {
     setVideoOverlay(null);
+    setVideoQueue([]);
+    setVideoIndex(-1);
     nativePauseTrack().catch(() => {});
     setIsPlaying(false);
     setCurrentIndex(-1);
@@ -324,6 +338,7 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   // next). With repeat off, the queue stops at the end on auto-advance but a
   // manual next still wraps to the start.
   const nextTrack = (auto = false) => {
+    if (videoOverlay) { openVideoAt(videoIndex + 1); return; }
     if (queue.length === 0) return;
 
     const next = getNextIndex(currentIndex, queue.length, { shuffle: isShuffling, repeatMode, auto });
@@ -339,6 +354,7 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   };
 
   const prevTrack = () => {
+    if (videoOverlay) { openVideoAt(videoIndex - 1); return; }
     if (queue.length === 0) return;
     playIndex(currentIndex > 0 ? currentIndex - 1 : queue.length - 1);
   };

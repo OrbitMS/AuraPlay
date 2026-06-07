@@ -210,12 +210,12 @@ export const RadioView: React.FC = () => {
 
       {/* Genre chips */}
       {!query.trim() && (
-        <div className="flex gap-1.5 overflow-x-auto scrollbar-hide pb-1 mb-5">
+        <div className="flex gap-2.5 overflow-x-auto scrollbar-hide pb-1 mb-7">
           {GENRES.map(g => (
             <button
               key={g.id}
               onClick={() => setGenre(g.id)}
-              className={`flex-shrink-0 px-3 py-1.5 rounded-full text-[11px] font-medium border transition-all ${
+              className={`flex-shrink-0 px-5 py-2.5 rounded-full text-[13px] font-medium border transition-all ${
                 genre === g.id
                   ? 'bg-[var(--gold-g)] border-[var(--gold-d)] text-[var(--gold)]'
                   : 'bg-[var(--s1)] border-[var(--bd)] text-[var(--ts)] hover:border-[var(--bs)] hover:text-[var(--tp)]'

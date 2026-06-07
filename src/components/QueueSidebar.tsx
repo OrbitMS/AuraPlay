@@ -1,6 +1,7 @@
 import React, { useContext, useRef, useState } from 'react';
 import { AudioContext } from '../context/AudioContext';
-import { X, ListMusic, GripVertical, Trash2, Infinity } from 'lucide-react';
+import { createPlaylist } from '../hooks/usePlaylists';
+import { X, ListMusic, GripVertical, Trash2, Infinity, ListPlus, Check } from 'lucide-react';
 import { safeImageUrl } from '../lib/safeUrl';
 
 interface Props {
@@ -11,6 +12,7 @@ export const QueueSidebar: React.FC<Props> = ({ onClose }) => {
   const ctx = useContext(AudioContext);
   const dragIndexRef = useRef<number | null>(null);
   const [dropTarget, setDropTarget] = useState<number | null>(null);
+  const [saved, setSaved] = useState(false);
 
   if (!ctx) return null;
   const {
@@ -50,6 +52,13 @@ export const QueueSidebar: React.FC<Props> = ({ onClose }) => {
   const upNext = queue.slice(currentIndex + 1);
   const played = queue.slice(0, currentIndex);
 
+  const saveQueue = () => {
+    if (queue.length === 0) return;
+    createPlaylist(`Queue · ${new Date().toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}`, queue);
+    setSaved(true);
+    setTimeout(() => setSaved(false), 1600);
+  };
+
   return (
     <>
       {/* Backdrop */}
@@ -59,49 +68,54 @@ export const QueueSidebar: React.FC<Props> = ({ onClose }) => {
       />
 
       {/* Panel */}
-      <div className="absolute right-0 top-0 bottom-0 z-30 w-[280px] flex flex-col bg-[var(--obsidian)] border-l border-[var(--bd)] shadow-2xl animate-slide-in-right">
+      <div className="absolute right-0 top-0 bottom-0 z-30 w-[340px] flex flex-col bg-[var(--obsidian)] border-l border-[var(--bd)] shadow-2xl animate-slide-in-right">
 
         {/* Header */}
-        <div className="flex items-center justify-between px-4 py-3.5 border-b border-[var(--bd)] flex-shrink-0">
-          <div className="flex items-center gap-2">
-            <ListMusic size={14} className="text-[var(--gold)]" />
-            <span className="text-[13px] font-semibold text-[var(--tp)] tracking-[0.01em]">Queue</span>
-            <span className="text-[10px] text-[var(--tt)] ml-1" style={{ fontFamily: 'var(--fm)' }}>
-              {queue.length} {queue.length === 1 ? 'track' : 'tracks'}
-            </span>
+        <div className="px-4 pt-4 pb-3 border-b border-[var(--bd)] flex-shrink-0">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2.5">
+              <ListMusic size={18} className="text-[var(--gold)]" />
+              <span className="text-[16px] font-bold text-[var(--tp)] tracking-[-0.01em]">Queue</span>
+              <span className="text-[11px] text-[var(--tt)] ml-0.5" style={{ fontFamily: 'var(--fm)' }}>
+                {queue.length} {queue.length === 1 ? 'track' : 'tracks'}
+              </span>
+            </div>
+            <button
+              onClick={onClose}
+              title="Close queue"
+              className="w-9 h-9 flex items-center justify-center rounded-[9px] text-[var(--tt)] hover:text-[var(--tp)] hover:bg-white/[0.06] transition-colors"
+            >
+              <X size={18} />
+            </button>
           </div>
-          <div className="flex items-center gap-1">
-            {/* Auto-queue toggle */}
+
+          {/* Action row — larger buttons */}
+          <div className="flex items-center gap-2">
             <button
               onClick={toggleAutoQueue}
               title={autoQueue ? 'Auto-queue on — click to disable' : 'Auto-queue off — click to enable'}
-              className={`flex items-center gap-1 px-2 py-1 rounded-[4px] text-[10px] transition-colors ${
-                autoQueue
-                  ? 'text-[var(--gold)] bg-[var(--gold-g)]'
-                  : 'text-[var(--tt)] hover:text-[var(--ts)] hover:bg-white/[0.04]'
-              }`}
-              style={{ fontFamily: 'var(--fm)' }}
-            >
-              <Infinity size={10} />
-              Auto
+              className={`flex items-center justify-center gap-1.5 h-9 px-3.5 rounded-[9px] text-[11px] font-semibold transition-colors ${
+                autoQueue ? 'text-[var(--gold)] bg-[var(--gold-g)] border border-[var(--gold-d)]'
+                  : 'text-[var(--ts)] border border-[var(--bd)] hover:text-[var(--tp)] hover:bg-white/[0.04]'
+              }`}>
+              <Infinity size={14} /> Auto
+            </button>
+            <button
+              onClick={saveQueue}
+              disabled={queue.length === 0}
+              title="Save queue as a playlist"
+              className="flex items-center justify-center gap-1.5 h-9 flex-1 rounded-[9px] text-[11px] font-semibold text-[var(--ts)] border border-[var(--bd)] hover:text-[var(--tp)] hover:bg-white/[0.04] transition-colors disabled:opacity-40">
+              {saved ? <Check size={14} className="text-[var(--gold)]" /> : <ListPlus size={14} />}
+              {saved ? 'Saved' : 'Save'}
             </button>
             {queue.length > 0 && (
               <button
                 onClick={stopTrack}
                 title="Clear queue"
-                className="flex items-center gap-1 px-2 py-1 rounded-[4px] text-[10px] text-[var(--tt)] hover:text-red-400 hover:bg-white/[0.04] transition-colors"
-                style={{ fontFamily: 'var(--fm)' }}
-              >
-                <Trash2 size={10} />
-                Clear
+                className="flex items-center justify-center gap-1.5 h-9 px-3.5 rounded-[9px] text-[11px] font-semibold text-[var(--tt)] border border-[var(--bd)] hover:text-red-400 hover:border-red-400/40 hover:bg-white/[0.04] transition-colors">
+                <Trash2 size={14} /> Clear
               </button>
             )}
-            <button
-              onClick={onClose}
-              className="w-6 h-6 flex items-center justify-center rounded-[4px] text-[var(--tt)] hover:text-[var(--tp)] hover:bg-white/[0.06] transition-colors"
-            >
-              <X size={14} />
-            </button>
           </div>
         </div>
 
@@ -259,7 +273,7 @@ const QueueRow: React.FC<RowProps> = ({
     onDragEnd={onDragEnd}
     onClick={!isActive ? onPlay : undefined}
     className={[
-      'group flex items-center gap-2 px-2 py-1.5 rounded-[5px] cursor-pointer select-none',
+      'group flex items-center gap-2.5 px-2 py-2 rounded-[8px] cursor-pointer select-none',
       'border-l-2 transition-colors',
       isActive
         ? 'bg-[var(--gold-g)] border-[var(--gold)]'
@@ -278,18 +292,18 @@ const QueueRow: React.FC<RowProps> = ({
       <img
         src={safeImageUrl(track.thumbnail)}
         alt=""
-        className={`w-8 h-8 rounded-[4px] object-cover flex-shrink-0 border ${isActive ? 'border-[var(--gold-d)]' : 'border-[var(--bd)]'}`}
+        className={`w-11 h-11 rounded-[7px] object-cover flex-shrink-0 border ${isActive ? 'border-[var(--gold-d)]' : 'border-[var(--bd)]'}`}
       />
     ) : (
-      <div className="w-8 h-8 rounded-[4px] bg-[var(--s2)] flex-shrink-0 border border-[var(--bd)]" />
+      <div className="w-11 h-11 rounded-[7px] bg-[var(--s2)] flex-shrink-0 border border-[var(--bd)]" />
     )}
 
     {/* Text */}
     <div className="flex flex-col min-w-0 flex-1">
-      <span className={`text-[11px] font-medium truncate leading-tight ${isActive ? 'text-[var(--gold)]' : 'text-[var(--tp)]'}`}>
+      <span className={`text-[12.5px] font-medium truncate leading-tight ${isActive ? 'text-[var(--gold)]' : 'text-[var(--tp)]'}`}>
         {track.title}
       </span>
-      <span className="text-[9px] text-[var(--ts)] truncate leading-tight mt-0.5" style={{ fontFamily: 'var(--fm)' }}>
+      <span className="text-[10.5px] text-[var(--ts)] truncate leading-tight mt-0.5" style={{ fontFamily: 'var(--fm)' }}>
         {track.artist || 'Unknown Artist'}
       </span>
     </div>
@@ -305,9 +319,9 @@ const QueueRow: React.FC<RowProps> = ({
       <button
         onClick={e => { e.stopPropagation(); onRemove(); }}
         title="Remove from queue"
-        className="flex-shrink-0 ml-1 w-5 h-5 flex items-center justify-center rounded text-[var(--tt)] hover:text-red-400 opacity-0 group-hover:opacity-100 transition-all"
+        className="flex-shrink-0 ml-1 w-7 h-7 flex items-center justify-center rounded-[7px] text-[var(--tt)] hover:text-red-400 hover:bg-white/[0.06] opacity-0 group-hover:opacity-100 transition-all"
       >
-        <X size={10} />
+        <X size={14} />
       </button>
     )}
   </div>
