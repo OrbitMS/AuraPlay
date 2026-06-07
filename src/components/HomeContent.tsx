@@ -66,12 +66,12 @@ const TrackCard = React.memo(function TrackCard({
             src={safeImageUrl(song.thumbnails[0].url)}
             alt={song.name}
             className={`w-full aspect-square object-cover border bg-[var(--s2)] ${
-              isAlbum ? 'rounded-[3px]' : 'rounded-[6px]'
+              isAlbum ? 'rounded-[8px]' : 'rounded-[11px]'
             } ${active ? 'border-[var(--gold-d)]' : 'border-[var(--bd)]'}`}
           />
         ) : (
           <div className={`w-full aspect-square border bg-[var(--s2)] flex items-center justify-center ${
-            isAlbum ? 'rounded-[3px]' : 'rounded-[6px]'
+            isAlbum ? 'rounded-[8px]' : 'rounded-[11px]'
           } ${active ? 'border-[var(--gold-d)]' : 'border-[var(--bd)]'}`}>
             {isAlbum && <Disc3 size={28} className="text-[var(--tt)] opacity-30" />}
           </div>
@@ -86,16 +86,16 @@ const TrackCard = React.memo(function TrackCard({
         )}
 
         {/* Play / loading overlay */}
-        <div className="absolute inset-0 flex items-center justify-center rounded-[6px] bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity">
+        <div className="absolute inset-0 flex items-center justify-center rounded-[11px] bg-black/45 opacity-0 group-hover:opacity-100 transition-opacity">
           {cardLoading ? (
-            <div className="w-8 h-8 rounded-full bg-[var(--s3)] flex items-center justify-center">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" strokeWidth="2" strokeLinecap="round" className="animate-spin">
+            <div className="w-11 h-11 rounded-full bg-[var(--s3)] flex items-center justify-center">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" strokeWidth="2" strokeLinecap="round" className="animate-spin">
                 <path d="M12 2a10 10 0 1 0 0 20"/>
               </svg>
             </div>
           ) : (
-            <div className="w-8 h-8 rounded-full bg-[var(--gold)] flex items-center justify-center shadow-lg">
-              <Play size={12} fill="var(--obsidian)" stroke="var(--obsidian)" />
+            <div className="w-11 h-11 rounded-full flex items-center justify-center shadow-lg" style={{ background: 'var(--irid)' }}>
+              <Play size={16} fill="#0b0d12" stroke="#0b0d12" style={{ marginLeft: 2 }} />
             </div>
           )}
         </div>
@@ -112,10 +112,10 @@ const TrackCard = React.memo(function TrackCard({
         )}
       </div>
 
-      <p className={`text-[11px] font-medium truncate leading-tight ${active ? 'text-[var(--gold)]' : 'text-[var(--tp)]'}`}>
+      <p className={`text-[12.5px] font-semibold truncate leading-tight ${active ? 'text-[var(--gold)]' : 'text-[var(--tp)]'}`}>
         {song.name}
       </p>
-      <p className="text-[10px] text-[var(--ts)] truncate mt-0.5 leading-tight" style={{ fontFamily: 'var(--fm)' }}>
+      <p className="text-[11px] text-[var(--ts)] truncate mt-1 leading-tight" style={{ fontFamily: 'var(--fm)' }}>
         {song.artists?.[0]?.name}
       </p>
     </div>
@@ -136,38 +136,38 @@ function Section({
   if (!loading && songs.length === 0) return null;
 
   return (
-    <div className="mb-8">
-      <h2 className="text-[14px] font-semibold text-[var(--tp)] mb-3 tracking-[-0.01em]">{title}</h2>
+    <div className="mb-9">
+      <h2 className="text-[15px] font-bold text-[var(--tp)] mb-3.5 tracking-[-0.012em] px-0.5">{title}</h2>
       {loading ? (
-        /* Skeleton — same responsive grid */
-        <div className="grid gap-3" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(158px, 1fr))' }}>
-          {Array.from({ length: 6 }).map((_, i) => (
-            <div key={i}>
-              <div className="w-full aspect-square rounded-[6px] bg-[var(--s2)] animate-pulse mb-2" />
+        /* Skeleton — horizontal row */
+        <div className="flex gap-4 overflow-hidden">
+          {Array.from({ length: 7 }).map((_, i) => (
+            <div key={i} className="flex-shrink-0" style={{ width: CARD_W }}>
+              <div className="w-full aspect-square rounded-[10px] bg-[var(--s2)] animate-pulse mb-2.5" />
               <div className="h-2.5 w-3/4 rounded bg-[var(--s3)] animate-pulse mb-1.5" />
               <div className="h-2 w-1/2 rounded bg-[var(--s3)] animate-pulse" />
             </div>
           ))}
         </div>
       ) : (
-        <div
-          className="grid gap-3"
-          style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(158px, 1fr))' }}
-        >
+        <div className="flex gap-4 overflow-x-auto scrollbar-hide snap-x pb-1 -mx-1 px-1">
           {songs.map(song => (
-            <TrackCard
-              key={song.id}
-              song={song}
-              active={currentId === song.id}
-              loading={loadingAlbumId === song.id}
-              onPlay={() => onPlay(song, songs)}
-            />
+            <div key={song.id} className="flex-shrink-0 snap-start" style={{ width: CARD_W }}>
+              <TrackCard
+                song={song}
+                active={currentId === song.id}
+                loading={loadingAlbumId === song.id}
+                onPlay={() => onPlay(song, songs)}
+              />
+            </div>
           ))}
         </div>
       )}
     </div>
   );
 }
+
+const CARD_W = 162;
 
 /* ─────────────────────────── HomeContent ────────────────────────────────── */
 type FeedSection = { title: string; tracks: SongCard[] };
@@ -287,8 +287,45 @@ export const HomeContent: React.FC = () => {
     thumbnails: [{ url: t.thumbnail }],
   }));
 
+  const featured: SongCard | undefined =
+    forYou[0] ?? trending[0]?.tracks?.[0] ?? explore[0]?.tracks?.[0];
+  const featuredArt = featured?.thumbnails?.[0]?.url;
+
   return (
     <div>
+      {/* Featured hero */}
+      {featured && (
+        <div className="relative mb-9 rounded-[20px] overflow-hidden">
+          {/* blurred artwork backdrop */}
+          {featuredArt && (
+            <div className="absolute inset-0">
+              <img src={safeImageUrl(featuredArt)} alt="" className="w-full h-full object-cover" style={{ filter: 'blur(40px) saturate(1.4)', transform: 'scale(1.2)' }} />
+              <div className="absolute inset-0" style={{ background: 'linear-gradient(100deg, rgba(14,15,19,0.92) 0%, rgba(14,15,19,0.72) 45%, rgba(14,15,19,0.35) 100%)' }} />
+            </div>
+          )}
+          <div className="relative flex items-center gap-6 p-6" style={{ minHeight: 196 }}>
+            <div className="flex-shrink-0 grid place-items-center" style={{ width: 150, height: 150 }}>
+              <div className="absolute pointer-events-none blob" style={{ width: 150, height: 150, background: 'var(--irid)', filter: 'blur(34px)', opacity: 0.4 }} />
+              <div className="blob sheen relative w-full h-full" style={{ overflow: 'hidden', border: '1px solid rgba(255,255,255,0.2)', boxShadow: '0 20px 50px rgba(0,0,0,0.5)' }}>
+                {featuredArt
+                  ? <img src={safeImageUrl(featuredArt)} alt="" className="w-full h-full object-cover" />
+                  : <div className="w-full h-full" style={{ background: 'var(--s2)' }} />}
+              </div>
+            </div>
+            <div className="min-w-0 flex-1">
+              <div className="text-[10px] font-bold tracking-[0.2em] uppercase mb-2" style={{ color: 'var(--gold)', fontFamily: 'var(--fm)' }}>Featured for you</div>
+              <h2 className="font-extrabold leading-[1.05] truncate" style={{ fontSize: 30, letterSpacing: '-0.025em', color: 'var(--tp)', fontFamily: 'var(--fd)' }}>{featured.name}</h2>
+              <p className="text-[13px] mt-1.5 truncate" style={{ color: 'var(--ts)' }}>{featured.artists?.[0]?.name}</p>
+              <button onClick={() => play(featured, forYou.length ? forYou : (trending[0]?.tracks ?? []))}
+                className="mt-4 inline-flex items-center gap-2 rounded-full px-6 py-2.5 text-[12px] font-bold uppercase tracking-[0.06em] hover:scale-[1.03] active:scale-95 transition-transform"
+                style={{ background: 'var(--irid)', color: '#0b0d12', border: 'none', cursor: 'pointer', boxShadow: '0 6px 22px var(--gold-g)' }}>
+                <Play size={15} fill="#0b0d12" stroke="#0b0d12" /> Play
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Recently Played */}
       {historyCards.length > 0 && (
         <Section title="Recently Played" songs={historyCards} onPlay={play} currentId={currentTrackId} loadingAlbumId={loadingAlbumId} />

@@ -24,14 +24,14 @@ export const PageHeader: React.FC<Props> = ({ title, subtitle, cover, actions, c
           </div>
         )}
         <div className="flex items-end justify-between gap-4">
-          <h1 className="leading-[1.02] truncate"
-            style={{ fontSize: cover ? 44 : 34, color: 'var(--tp)' }}>
+          <h1 className="leading-[1.05] truncate"
+            style={{ fontSize: cover ? 40 : 30, fontWeight: 800, letterSpacing: '-0.022em', color: 'var(--tp)', fontFamily: 'var(--fd)' }}>
             {title}
           </h1>
           {actions && <div className="flex-shrink-0 flex items-center gap-2">{actions}</div>}
         </div>
         {subtitle && (
-          <p className="text-[13px] mt-2.5" style={{ color: 'var(--ts)' }}>{subtitle}</p>
+          <p className="text-[12.5px] mt-2" style={{ color: 'var(--ts)' }}>{subtitle}</p>
         )}
         {children && <div className="mt-5">{children}</div>}
       </div>

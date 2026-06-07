@@ -3,6 +3,7 @@ import { type AudioQuality } from '../hooks/useSettings';
 import { setAudioQuality } from '../services/youtube';
 import { connectSpotify, disconnectSpotify, isSpotifyConnected, getClientId } from '../services/spotifyAuth';
 import { getJamendoClientId, setJamendoClientId } from '../services/jamendo';
+import { PageHeader } from '../components/PageHeader';
 import { Music2, Check, Loader, Library } from 'lucide-react';
 
 interface Props {
@@ -39,12 +40,7 @@ export const SettingsView: React.FC<Props> = ({ quality, onQualityChange }) => {
 
   return (
     <div className="px-[36px] pt-[32px] pb-[40px] w-full max-w-[600px]">
-      <h1 className="text-[28px] text-[var(--tp)] tracking-[-0.01em] leading-[1.1]" style={{ fontFamily: 'var(--fd)' }}>
-        Settings
-      </h1>
-      <div className="text-[10px] text-[var(--tt)] mt-1.5 tracking-[0.08em] uppercase mb-8" style={{ fontFamily: 'var(--fm)' }}>
-        Preferences
-      </div>
+      <PageHeader eyebrow="Preferences" title="Settings" subtitle="Audio quality, accounts and integrations" />
 
       {/* Audio Quality */}
       <section className="mb-8">

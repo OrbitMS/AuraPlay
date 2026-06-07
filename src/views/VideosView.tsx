@@ -2,7 +2,6 @@ import React, { useState, useEffect, useContext } from 'react';
 import { searchVideos, prefetchVideoStreamUrl, type VideoResult } from '../services/youtube';
 import { AudioContext } from '../context/AudioContext';
 import { PageHeader } from '../components/PageHeader';
-import { VideoPlayer } from '../components/VideoPlayer';
 import { safeImageUrl } from '../lib/safeUrl';
 import { Search, Loader, Play, Video } from 'lucide-react';
 
@@ -28,7 +27,6 @@ export const VideosView: React.FC = () => {
   const [results, setResults] = useState<VideoResult[]>([]);
   const [loading, setLoading] = useState(false);
   const [searched, setSearched] = useState(false);
-  const [playing, setPlaying] = useState<VideoResult | null>(null);
 
   const run = async (q: string) => {
     if (!q.trim()) return;
@@ -40,16 +38,7 @@ export const VideosView: React.FC = () => {
 
   useEffect(() => { run('Official music video'); /* eslint-disable-next-line */ }, []);
 
-  const open = (v: VideoResult) => {
-    // Show the video in the transport bar; the <video> element drives playback.
-    ctx?.playVideoTrack({ id: v.id, title: v.title, artist: v.author, thumbnail: v.thumbnail });
-    setPlaying(v);
-  };
-
-  const close = () => {
-    ctx?.stopTrack();
-    setPlaying(null);
-  };
+  const open = (v: VideoResult) => ctx?.openVideo(v);
 
   return (
     <div className="px-[40px] pt-[36px] pb-[48px] w-full">
@@ -123,8 +112,6 @@ export const VideosView: React.FC = () => {
           ))}
         </div>
       )}
-
-      {playing && <VideoPlayer video={playing} onClose={close} />}
     </div>
   );
 };

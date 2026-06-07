@@ -1,7 +1,8 @@
-import { useState, useEffect, lazy, Suspense } from 'react';
+import { useState, useEffect, useContext, lazy, Suspense } from 'react';
 import { getVersion } from '@tauri-apps/api/app';
 import { openUrl } from '@tauri-apps/plugin-opener';
-import { AudioProvider } from './context/AudioContext';
+import { AudioProvider, AudioContext } from './context/AudioContext';
+import { VideoPlayer } from './components/VideoPlayer';
 import { SearchView } from './views/SearchView';
 import { AudioPlayerBar } from './components/AudioPlayerBar';
 
@@ -111,24 +112,33 @@ function App() {
               <div className="absolute right-[3px] top-0 h-full w-[2px] transition-colors group-hover:bg-[var(--gold)]" />
             </div>
 
-            {/* Logo — AuraPlay mark (play triangle + aura rings) */}
-            <div className="px-6 pt-9 pb-10 flex items-center gap-3.5">
-              <div className="blob sheen w-[52px] h-[52px] flex items-center justify-center flex-shrink-0 glow-accent"
-                style={{ background: 'var(--irid-soft)', border: '1px solid rgba(255,255,255,0.18)' }}>
-                <svg viewBox="0 0 24 24" className="w-[28px] h-[28px] relative" style={{ zIndex: 1 }}>
-                  <circle cx="12" cy="12" r="10" fill="none" stroke="#ffffff" strokeOpacity="0.45" strokeWidth="1.1"/>
-                  <circle cx="12" cy="12" r="6.6" fill="none" stroke="#ffffff" strokeOpacity="0.3" strokeWidth="1.1"/>
-                  <path d="M10 8.2 L16.2 12 L10 15.8 Z" fill="#ffffff" stroke="#ffffff" strokeWidth="1.4" strokeLinejoin="round"/>
-                </svg>
+            {/* Logo — crisp iridescent glass tile + play mark */}
+            <div className="px-6 pt-7 pb-6 flex items-center gap-3.5">
+              <div className="relative flex-shrink-0">
+                {/* soft glow sits behind the tile so the mark itself stays sharp */}
+                <div className="absolute -inset-1.5 rounded-[18px] opacity-55 pointer-events-none"
+                  style={{ background: 'var(--irid)', filter: 'blur(11px)' }} />
+                <div className="relative w-[46px] h-[46px] rounded-[14px] flex items-center justify-center overflow-hidden"
+                  style={{ background: 'var(--irid)', boxShadow: 'inset 0 1.5px 1px rgba(255,255,255,0.55), inset 0 -3px 6px rgba(0,0,0,0.28), 0 5px 14px rgba(0,0,0,0.4)' }}>
+                  {/* crisp glass highlight */}
+                  <div className="absolute inset-0 pointer-events-none" style={{ background: 'linear-gradient(150deg, rgba(255,255,255,0.45) 0%, transparent 42%)' }} />
+                  <svg viewBox="0 0 24 24" className="w-[25px] h-[25px] relative" fill="none">
+                    <circle cx="12" cy="12" r="9" stroke="#ffffff" strokeOpacity="0.7" strokeWidth="1.5"/>
+                    <path d="M10 7.8 L16.6 12 L10 16.2 Z" fill="#ffffff" stroke="#ffffff" strokeWidth="1.4" strokeLinejoin="round"/>
+                  </svg>
+                </div>
               </div>
               <div className="flex flex-col leading-none gap-1.5">
-                <span className="irid-text text-[25px] font-extrabold tracking-[-0.03em]" style={{ fontFamily: 'var(--fu)' }}>AuraPlay</span>
+                <span className="irid-text font-extrabold" style={{ fontFamily: 'var(--fu)', fontSize: 23, letterSpacing: '-0.012em' }}>AuraPlay</span>
                 <span className="text-[9px] tracking-[0.30em] uppercase" style={{ color: 'var(--tt)', fontFamily: 'var(--fm)' }}>Music · Radio</span>
               </div>
             </div>
 
+            {/* Scrollable nav region — keeps the footer pinned and stops the list cramping */}
+            <div className="flex-1 min-h-0 overflow-y-auto scrollbar-hide">
+
             {/* Discover */}
-            <div className="px-4 mb-7">
+            <div className="px-4 mb-6">
               <SectionLabel>Discover</SectionLabel>
               <NavItem active={view === 'search'} onClick={() => setView('search')}
                 icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="w-[19px] h-[19px] flex-shrink-0"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>}
@@ -147,10 +157,10 @@ function App() {
                 label="Jamendo" />
             </div>
 
-            <div className="h-px mx-5 my-5" style={{ background: 'rgba(255,255,255,0.06)' }} />
+            <div className="h-px mx-5 my-4" style={{ background: 'rgba(255,255,255,0.06)' }} />
 
             {/* Library */}
-            <div className="px-4 mb-7">
+            <div className="px-4 mb-4">
               <SectionLabel>Library</SectionLabel>
               <NavItem active={view === 'favorites'} onClick={() => setView('favorites')}
                 icon={<svg viewBox="0 0 24 24" fill={view === 'favorites' ? 'var(--gold)' : 'none'} stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="w-[19px] h-[19px] flex-shrink-0"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78L12 21.23l8.84-8.84a5.5 5.5 0 0 0 0-7.78z"/></svg>}
@@ -166,8 +176,10 @@ function App() {
                 label="Stats" />
             </div>
 
-            {/* Bottom */}
-            <div className="mt-auto pt-3" style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+            </div>{/* end scrollable nav region */}
+
+            {/* Bottom (pinned) */}
+            <div className="pt-3 flex-shrink-0" style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
               <div className="px-4">
                 <NavItem active={view === 'settings'} onClick={() => setView('settings')}
                   icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="w-[19px] h-[19px] flex-shrink-0"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/></svg>}
@@ -249,6 +261,9 @@ function App() {
           onResizeStart={startPlayerResize}
         />
 
+        {/* Music-video overlay — sits above the transport bar so the bar stays usable */}
+        <VideoOverlayHost playerHeight={playerHeight} />
+
         {/* Full-screen Now Playing */}
         {showNowPlaying && <NowPlayingScreen onClose={() => setShowNowPlaying(false)} />}
 
@@ -257,6 +272,13 @@ function App() {
       </div>
     </AudioProvider>
   );
+}
+
+/* Renders the music-video overlay from context, stopping above the transport bar. */
+function VideoOverlayHost({ playerHeight }: { playerHeight: number }) {
+  const ctx = useContext(AudioContext);
+  if (!ctx?.videoOverlay) return null;
+  return <VideoPlayer video={ctx.videoOverlay} bottomOffset={playerHeight} onClose={ctx.closeVideo} />;
 }
 
 /* ── Reusable sidebar primitives ──────────────────────────────────────────── */
