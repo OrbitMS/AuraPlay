@@ -11,6 +11,8 @@ import {
   isUnplayable,
   playDirectStream,
   prefetchStreamUrl,
+  pauseTrack,
+  type VideoResult,
 } from '../services/youtube';
 import { listDownloaded as listDownloadedTracks, type OfflineTrack } from '../services/offline';
 import type { RadioStation } from '../services/radio';
@@ -47,10 +49,11 @@ interface AudioContextType {
   cycleRepeat: () => void;
   setShuffling: (val: boolean) => void;
   playTrack: (track: Track, completePlaylist?: Track[]) => void;
-  /** Show a music video in the transport without starting the audio pipeline.
-   *  Playback is driven by the registered <video> element (VideoPlayer). */
-  playVideoTrack: (track: Track) => void;
   playAtIndex: (index: number) => void;
+  /** Music-video overlay state + controls. */
+  videoOverlay: VideoResult | null;
+  openVideo: (v: VideoResult) => void;
+  closeVideo: () => void;
   togglePlay: () => void;
   nextTrack: () => void;
   prevTrack: () => void;
@@ -86,6 +89,7 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [autoQueueStart, setAutoQueueStart] = useState<number | null>(null);
   const [radioStation, setRadioStation] = useState<RadioStation | null>(null);
   const [downloaded, setDownloaded] = useState<OfflineTrack[]>([]);
+  const [videoOverlay, setVideoOverlay] = useState<VideoResult | null>(null);
   const { push: pushHistory } = useHistory();
 
   const currentTrack = currentIndex >= 0 && currentIndex < queue.length ? queue[currentIndex] : null;
@@ -182,6 +186,7 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           setIsPlaying(false);
           break;
         case 'error':
+          if (videoOverlay) { setIsPlaying(false); break; }
           // Skip unplayable tracks, but give up once we've cycled the whole queue.
           // Delay prevents rapid-fire cascades that flood YouTube with requests.
           if (queue.length > 0 && skipCountRef.current < queue.length) {
@@ -193,6 +198,8 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           }
           break;
         case 'ended':
+          // A finished video must not trigger the audio pipeline.
+          if (videoOverlay) { setIsPlaying(false); break; }
           // Auto advance to next song when current finishes
           if (repeatMode === 'one') {
             // Replay same song
@@ -210,7 +217,7 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     return () => {
       if (typeof unlistenFn === 'function') unlistenFn();
     };
-  }, [currentIndex, queue, repeatMode, isShuffling, currentTrack]);
+  }, [currentIndex, queue, repeatMode, isShuffling, currentTrack, videoOverlay]);
 
   const toggleAutoQueue = () => setAutoQueue(v => !v);
 
@@ -242,17 +249,29 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     else nativePlayTrack(track.id).catch(err => console.error("Playback failed:", err));
   };
 
-  const playVideoTrack = (track: Track) => {
+  const openVideo = (v: VideoResult) => {
+    // Stop any audio immediately so the song and video never play in parallel.
+    pauseTrack().catch(() => {});
     skipCountRef.current = 0;
     setRadioStation(null);
     setAutoQueueStart(null);
     isFetchingAutoRef.current = false;
+    const track: Track = { id: v.id, title: v.title, artist: v.author, thumbnail: v.thumbnail };
     setQueue([track]);
     setCurrentIndex(0);
     setIsPlaying(true);
     recordPlay(track);
+    setVideoOverlay(v);
     // No nativePlayTrack(): the <video> element drives playback and is
     // registered with the service so the transport controls it.
+  };
+
+  const closeVideo = () => {
+    setVideoOverlay(null);
+    nativePauseTrack().catch(() => {});
+    setIsPlaying(false);
+    setCurrentIndex(-1);
+    setQueue([]);
   };
 
   const togglePlay = async () => {
@@ -272,6 +291,9 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   };
 
   const playIndex = (index: number) => {
+    // While a music video is open, the <video> drives playback — never start the
+    // audio pipeline (would play the song in parallel with the video).
+    if (videoOverlay) return;
     const track = queue[index];
     if (!track) return;
     // Direct-URL tracks (Internet Archive, Jamendo) skip YouTube resolution
@@ -389,8 +411,10 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       cycleRepeat,
       setShuffling: setIsShuffling,
       playTrack,
-      playVideoTrack,
       playAtIndex,
+      videoOverlay,
+      openVideo,
+      closeVideo,
       togglePlay,
       nextTrack,
       prevTrack,

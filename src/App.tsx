@@ -1,7 +1,8 @@
-import { useState, useEffect, lazy, Suspense } from 'react';
+import { useState, useEffect, useContext, lazy, Suspense } from 'react';
 import { getVersion } from '@tauri-apps/api/app';
 import { openUrl } from '@tauri-apps/plugin-opener';
-import { AudioProvider } from './context/AudioContext';
+import { AudioProvider, AudioContext } from './context/AudioContext';
+import { VideoPlayer } from './components/VideoPlayer';
 import { SearchView } from './views/SearchView';
 import { AudioPlayerBar } from './components/AudioPlayerBar';
 
@@ -249,6 +250,9 @@ function App() {
           onResizeStart={startPlayerResize}
         />
 
+        {/* Music-video overlay — sits above the transport bar so the bar stays usable */}
+        <VideoOverlayHost playerHeight={playerHeight} />
+
         {/* Full-screen Now Playing */}
         {showNowPlaying && <NowPlayingScreen onClose={() => setShowNowPlaying(false)} />}
 
@@ -257,6 +261,13 @@ function App() {
       </div>
     </AudioProvider>
   );
+}
+
+/* Renders the music-video overlay from context, stopping above the transport bar. */
+function VideoOverlayHost({ playerHeight }: { playerHeight: number }) {
+  const ctx = useContext(AudioContext);
+  if (!ctx?.videoOverlay) return null;
+  return <VideoPlayer video={ctx.videoOverlay} bottomOffset={playerHeight} onClose={ctx.closeVideo} />;
 }
 
 /* ── Reusable sidebar primitives ──────────────────────────────────────────── */
