@@ -501,8 +501,10 @@ function pickMuxedFormat(info: any): any | null {
   if (muxed.length === 0) {
     try { return info.chooseFormat({ type: 'video+audio', quality: 'best' }); } catch { return null; }
   }
-  muxed.sort((a, b) => (b.height ?? b.width ?? 0) - (a.height ?? a.width ?? 0));
-  return muxed[0];
+  // Prefer the lightest stream that's still ≥360p for the fastest start/buffering
+  // (muxed only offers 360p/720p anyway). Falls back to the largest available.
+  const byHeightAsc = [...muxed].sort((a, b) => (a.height ?? a.width ?? 0) - (b.height ?? b.width ?? 0));
+  return byHeightAsc.find(f => (f.height ?? 0) >= 360) ?? byHeightAsc[byHeightAsc.length - 1];
 }
 
 const videoUrlCache = new Map<string, { url: string; expiresAt: number }>();
@@ -953,3 +955,38 @@ export function subscribeToAudioStatus(callback: (state: string) => void) {
 export const setVolume = async (volume: number) => {
   await setTrackVolume(volume);
 };
+
+// ── Bass control (Web Audio low-shelf) ─────────────────────────────────────
+// 0–100 → 0…+15 dB low-shelf boost at 220 Hz. The Web Audio graph is created
+// lazily the first time the user raises bass above 0, so the default playback
+// path is never routed through Web Audio (which would zero cross-origin streams).
+let waCtx: AudioContext | null = null;
+let bassNode: BiquadFilterNode | null = null;
+let mediaSrcNode: MediaElementAudioSourceNode | null = null;
+let bassLevel = 0;
+
+function ensureBassGraph() {
+  if (waCtx || !audioEl) return;
+  try {
+    const AC: typeof AudioContext = (window as any).AudioContext || (window as any).webkitAudioContext;
+    waCtx = new AC();
+    mediaSrcNode = waCtx.createMediaElementSource(audioEl);
+    bassNode = waCtx.createBiquadFilter();
+    bassNode.type = 'lowshelf';
+    bassNode.frequency.value = 220;
+    bassNode.gain.value = (bassLevel / 100) * 15;
+    mediaSrcNode.connect(bassNode);
+    bassNode.connect(waCtx.destination);
+  } catch (err) {
+    console.warn('[bass] Web Audio graph unavailable:', err);
+  }
+}
+
+export function setBass(level: number): void {
+  bassLevel = Math.min(100, Math.max(0, level));
+  if (bassLevel > 0) ensureBassGraph();
+  if (bassNode) bassNode.gain.value = (bassLevel / 100) * 15;
+  if (waCtx?.state === 'suspended') waCtx.resume().catch(() => {});
+}
+
+export function getBass(): number { return bassLevel; }

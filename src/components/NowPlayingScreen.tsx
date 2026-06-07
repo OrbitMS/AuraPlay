@@ -84,7 +84,7 @@ export const NowPlayingScreen: React.FC<Props> = ({ onClose }) => {
   if (!ctx) return null;
   const {
     currentTrack, radioStation, isPlaying, togglePlay, nextTrack, prevTrack,
-    isShuffling, repeatMode, setShuffling, cycleRepeat, volume, setVolume,
+    isShuffling, repeatMode, setShuffling, cycleRepeat, volume, setVolume, bass, setBass,
   } = ctx;
 
   const isLive = radioStation !== null;
@@ -97,8 +97,6 @@ export const NowPlayingScreen: React.FC<Props> = ({ onClose }) => {
   const onDown = (e: React.PointerEvent<HTMLDivElement>) => { e.currentTarget.setPointerCapture(e.pointerId); draggingRef.current = true; seekFromX(e.clientX); };
   const onMove = (e: React.PointerEvent<HTMLDivElement>) => { if (draggingRef.current) seekFromX(e.clientX); };
   const onUp   = (e: React.PointerEvent<HTMLDivElement>) => { draggingRef.current = false; e.currentTarget.releasePointerCapture(e.pointerId); };
-
-  const seekFromPct = (pct: number) => { if (duration > 0) { seekTo((pct / 100) * duration); setCurrentTime((pct / 100) * duration); } };
 
   return (
     <div className="fixed inset-0 z-50 flex flex-col animate-np-in"
@@ -210,9 +208,9 @@ export const NowPlayingScreen: React.FC<Props> = ({ onClose }) => {
             {/* brass knob panel — docked right */}
             {!isLive && (
               <div className="absolute right-0 top-1/2 -translate-y-1/2 flex flex-col items-center gap-5 pr-2">
-                <span className="text-[10px] tracking-[0.28em] uppercase" style={{ color: 'var(--gold)', fontFamily: 'var(--fm)' }}>Volume</span>
-                <VolumeKnob value={volume} onChange={setVolume} size={92} label="Level" />
-                <VolumeKnob value={fillPct} onChange={seekFromPct} size={108} label="Track" />
+                <span className="text-[10px] tracking-[0.28em] uppercase" style={{ color: 'var(--gold)', fontFamily: 'var(--fm)' }}>Mixer</span>
+                <VolumeKnob value={volume} onChange={setVolume} size={92} label="Volume" />
+                <VolumeKnob value={bass} onChange={setBass} size={108} label="Bass" />
               </div>
             )}
           </div>

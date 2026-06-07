@@ -12,6 +12,7 @@ import {
   playDirectStream,
   prefetchStreamUrl,
   pauseTrack,
+  setBass as nativeSetBass,
   type VideoResult,
 } from '../services/youtube';
 import { listDownloaded as listDownloadedTracks, type OfflineTrack } from '../services/offline';
@@ -44,6 +45,8 @@ interface AudioContextType {
   repeatMode: RepeatMode;
   isShuffling: boolean;
   volume: number;
+  bass: number;
+  setBass: (v: number) => void;
   downloadedIds: Set<string>;
   downloadingIds: Set<string>;
   cycleRepeat: () => void;
@@ -83,6 +86,7 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [repeatMode, setRepeatMode] = useState<RepeatMode>('off');
   const [isShuffling, setIsShuffling] = useState(false);
   const [volume, setVolumeState] = useState<number>(70); // Initialize standard fallback volume at 70%
+  const [bass, setBassState] = useState<number>(0);
   const [downloadedIds, setDownloadedIds] = useState<Set<string>>(new Set());
   const [downloadingIds, setDownloadingIds] = useState<Set<string>>(new Set());
   const [autoQueue, setAutoQueue] = useState(true);
@@ -404,6 +408,11 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     setQueue([]);
   };
 
+  const setBass = (val: number) => {
+    setBassState(val);
+    nativeSetBass(val);
+  };
+
   const setVolume = async (val: number) => {
     setVolumeState(val);
     try {
@@ -422,6 +431,8 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       repeatMode,
       isShuffling,
       volume,
+      bass,
+      setBass,
       downloadedIds,
       downloadingIds,
       cycleRepeat,
