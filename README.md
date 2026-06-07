@@ -8,6 +8,7 @@ Download latest Version on the right (.exe) -> install and enjoy!
 
 ---
 <img width="960" height="487" alt="image" src="https://github.com/user-attachments/assets/e62abd6a-d082-4d5d-aacb-0ab043ff088f" />
+
 <img width="960" height="487" alt="image" src="https://github.com/user-attachments/assets/a6a5d9c7-1fa1-49df-8577-958ede173643" />
 
 
