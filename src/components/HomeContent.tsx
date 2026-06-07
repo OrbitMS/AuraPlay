@@ -8,8 +8,10 @@ import {
 import { AudioContext, type Track } from '../context/AudioContext';
 import { useHistory } from '../hooks/useHistory';
 import { useLikes } from '../hooks/useLikes';
-import { Heart, Play, Disc3 } from 'lucide-react';
+import { Heart, Play, Disc3, Download, CheckCircle, Loader } from 'lucide-react';
 import { safeImageUrl } from '../lib/safeUrl';
+
+const EMPTY_SET = new Set<string>();
 
 type SongCard = {
   id: string;
@@ -45,12 +47,19 @@ const TrackCard = React.memo(function TrackCard({
   song: SongCard; onPlay: () => void; active: boolean; loading?: boolean;
 }) {
   const { toggle, isLiked } = useLikes();
+  const ctx = useContext(AudioContext);
   const liked = isLiked(song.id);
   const isAlbum = song.itemType === 'album';
   const track: Track = {
     id: song.id, title: song.name,
     artist: song.artists?.[0]?.name ?? '',
     thumbnail: song.thumbnails?.[0]?.url ?? '',
+  };
+  const isDl   = (ctx?.downloadedIds ?? EMPTY_SET).has(song.id);
+  const isDling = (ctx?.downloadingIds ?? EMPTY_SET).has(song.id);
+  const onDownload = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (isDl) ctx?.removeDownload(song.id); else ctx?.downloadTrack(track);
   };
 
   return (
@@ -100,15 +109,27 @@ const TrackCard = React.memo(function TrackCard({
           )}
         </div>
 
-        {/* Like button */}
+        {/* Hover actions: favorite + download */}
         {!isAlbum && (
-          <button
-            onClick={e => { e.stopPropagation(); toggle(track); }}
-            title={liked ? 'Remove from favorites' : 'Add to favorites'}
-            className="absolute top-1.5 right-1.5 w-6 h-6 rounded-full bg-black/60 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-black/80"
-          >
-            <Heart size={10} fill={liked ? 'var(--gold)' : 'none'} stroke={liked ? 'var(--gold)' : 'white'} />
-          </button>
+          <div className="absolute top-1.5 right-1.5 flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+            <button
+              onClick={e => { e.stopPropagation(); toggle(track); }}
+              title={liked ? 'Remove from favorites' : 'Add to favorites'}
+              className="w-7 h-7 rounded-full bg-black/65 flex items-center justify-center hover:scale-110 transition-transform"
+            >
+              <Heart size={13} fill={liked ? 'var(--gold)' : 'none'} stroke={liked ? 'var(--gold)' : 'white'} />
+            </button>
+            <button
+              onClick={onDownload}
+              disabled={isDling}
+              title={isDl ? 'Downloaded' : 'Download'}
+              className="w-7 h-7 rounded-full bg-black/65 flex items-center justify-center hover:scale-110 transition-transform disabled:opacity-60"
+            >
+              {isDling ? <Loader size={13} className="animate-spin text-[var(--gold)]" />
+                : isDl ? <CheckCircle size={13} className="text-[var(--gold)]" />
+                : <Download size={13} stroke="white" />}
+            </button>
+          </div>
         )}
       </div>
 

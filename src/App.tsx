@@ -130,7 +130,7 @@ function App() {
               </div>
               <div className="flex flex-col leading-none gap-1.5">
                 <span className="irid-text font-extrabold" style={{ fontFamily: 'var(--fu)', fontSize: 23, letterSpacing: '-0.012em' }}>AuraPlay</span>
-                <span className="text-[9px] tracking-[0.30em] uppercase" style={{ color: 'var(--tt)', fontFamily: 'var(--fm)' }}>Music · Radio</span>
+                <span className="text-[9px] tracking-[0.26em] uppercase" style={{ color: 'var(--tt)', fontFamily: 'var(--fm)' }}>Music · Radio · Video</span>
               </div>
             </div>
 
@@ -278,7 +278,7 @@ function App() {
 function VideoOverlayHost({ playerHeight }: { playerHeight: number }) {
   const ctx = useContext(AudioContext);
   if (!ctx?.videoOverlay) return null;
-  return <VideoPlayer video={ctx.videoOverlay} bottomOffset={playerHeight} onClose={ctx.closeVideo} />;
+  return <VideoPlayer key={ctx.videoOverlay.id} video={ctx.videoOverlay} bottomOffset={playerHeight} onClose={ctx.closeVideo} />;
 }
 
 /* ── Reusable sidebar primitives ──────────────────────────────────────────── */
