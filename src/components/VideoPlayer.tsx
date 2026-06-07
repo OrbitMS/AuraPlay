@@ -40,38 +40,38 @@ export const VideoPlayer: React.FC<Props> = ({ video, onClose, bottomOffset = 0 
   }, [onClose]);
 
   return (
-    <div className="fixed left-0 right-0 top-0 z-[45] flex flex-col animate-np-in"
-      style={{ bottom: bottomOffset, background: 'rgba(6,7,10,0.92)', backdropFilter: 'blur(20px)' }}>
-      {/* Header */}
-      <div className="flex items-center justify-between px-7 pt-6 pb-4">
+    <div className="group fixed left-0 right-0 top-0 z-[45] animate-np-in"
+      style={{ bottom: bottomOffset, background: '#000' }}>
+
+      {/* Video fills the stage edge-to-edge — native, no frame */}
+      {error ? (
+        <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 text-center px-8">
+          <AlertCircle size={32} className="text-[var(--tt)] opacity-40" />
+          <p className="text-[13px]" style={{ color: 'var(--ts)' }}>This video couldn't be played</p>
+          <p className="text-[11px] opacity-60 max-w-[420px]" style={{ color: 'var(--tt)', fontFamily: 'var(--fm)' }}>{error}</p>
+        </div>
+      ) : !url ? (
+        <div className="absolute inset-0 flex items-center justify-center">
+          <Loader size={28} className="animate-spin text-[var(--gold)]" />
+        </div>
+      ) : (
+        <video ref={videoRef} src={url} controls autoPlay playsInline
+          className="absolute inset-0 w-full h-full" style={{ background: '#000', objectFit: 'contain' }} />
+      )}
+
+      {/* Floating title + close — fade in on hover, no boxed header */}
+      <div className="absolute top-0 left-0 right-0 flex items-start justify-between gap-4 px-6 pt-5 pb-10 pointer-events-none
+        opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+        style={{ background: 'linear-gradient(180deg, rgba(0,0,0,0.6) 0%, transparent 100%)' }}>
         <div className="min-w-0 pr-4">
-          <h2 className="text-[17px] font-semibold truncate" style={{ color: 'var(--tp)' }}>{video.title}</h2>
-          <p className="text-[12px] truncate mt-0.5" style={{ color: 'var(--ts)', fontFamily: 'var(--fm)' }}>{video.author}</p>
+          <h2 className="text-[16px] font-semibold truncate" style={{ color: '#fff' }}>{video.title}</h2>
+          <p className="text-[12px] truncate mt-0.5" style={{ color: 'rgba(255,255,255,0.7)', fontFamily: 'var(--fm)' }}>{video.author}</p>
         </div>
         <button onClick={onClose} title="Close (Esc)"
-          className="w-11 h-11 flex-shrink-0 flex items-center justify-center rounded-full transition-colors hover:bg-white/[0.08]"
-          style={{ background: 'rgba(255,255,255,0.06)', border: 'none', cursor: 'pointer', color: 'var(--tp)' }}>
+          className="pointer-events-auto w-10 h-10 flex-shrink-0 flex items-center justify-center rounded-full transition-colors hover:bg-white/[0.15]"
+          style={{ background: 'rgba(0,0,0,0.45)', border: 'none', cursor: 'pointer', color: '#fff' }}>
           <X size={20} />
         </button>
-      </div>
-
-      {/* Stage */}
-      <div className="flex-1 min-h-0 flex items-center justify-center px-6 pb-6">
-        <div className="relative w-full h-full flex items-center justify-center">
-          {error ? (
-            <div className="flex flex-col items-center justify-center gap-3 text-center px-8">
-              <AlertCircle size={32} className="text-[var(--tt)] opacity-40" />
-              <p className="text-[13px]" style={{ color: 'var(--ts)' }}>This video couldn't be played</p>
-              <p className="text-[11px] opacity-60 max-w-[420px]" style={{ color: 'var(--tt)', fontFamily: 'var(--fm)' }}>{error}</p>
-            </div>
-          ) : !url ? (
-            <Loader size={26} className="animate-spin text-[var(--gold)]" />
-          ) : (
-            <video ref={videoRef} src={url} controls autoPlay playsInline
-              className="max-w-full max-h-full rounded-[14px]"
-              style={{ background: '#000', boxShadow: '0 30px 90px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.08)' }} />
-          )}
-        </div>
       </div>
     </div>
   );
