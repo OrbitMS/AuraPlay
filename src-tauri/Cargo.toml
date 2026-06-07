@@ -1,6 +1,6 @@
 [package]
 name = "auraplay"
-version = "0.1.15"
+version = "0.1.16"
 description = "AuraPlay — music & radio player"
 authors = ["you"]
 edition = "2021"
