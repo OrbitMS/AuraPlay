@@ -84,7 +84,7 @@ export const NowPlayingScreen: React.FC<Props> = ({ onClose }) => {
   if (!ctx) return null;
   const {
     currentTrack, radioStation, isPlaying, togglePlay, nextTrack, prevTrack,
-    isShuffling, repeatMode, setShuffling, cycleRepeat, volume, setVolume, bass, setBass,
+    isShuffling, repeatMode, setShuffling, cycleRepeat, volume, setVolume,
   } = ctx;
 
   const isLive = radioStation !== null;
@@ -208,9 +208,8 @@ export const NowPlayingScreen: React.FC<Props> = ({ onClose }) => {
             {/* brass knob panel — docked right */}
             {!isLive && (
               <div className="absolute right-0 top-1/2 -translate-y-1/2 flex flex-col items-center gap-5 pr-2">
-                <span className="text-[10px] tracking-[0.28em] uppercase" style={{ color: 'var(--gold)', fontFamily: 'var(--fm)' }}>Mixer</span>
-                <VolumeKnob value={volume} onChange={setVolume} size={92} label="Volume" />
-                <VolumeKnob value={bass} onChange={setBass} size={108} label="Bass" />
+                <span className="text-[10px] tracking-[0.28em] uppercase" style={{ color: 'var(--gold)', fontFamily: 'var(--fm)' }}>Volume</span>
+                <VolumeKnob value={volume} onChange={setVolume} size={108} label={`${Math.round(volume)}%`} />
               </div>
             )}
           </div>
@@ -218,7 +217,7 @@ export const NowPlayingScreen: React.FC<Props> = ({ onClose }) => {
       </div>
 
       {/* Transport — thin-line, centered */}
-      <div className="relative z-10 flex flex-col items-center gap-3 pb-10 pt-2">
+      <div className="relative z-10 flex flex-col items-center gap-3.5 pb-14 pt-3">
         {!isLive ? (
           <div className="flex items-center gap-3 text-[11px] tabular-nums" style={{ color: 'var(--ts)', fontFamily: 'var(--fm)' }}>
             <span>{fmt(currentTime)}</span>

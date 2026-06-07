@@ -1,4 +1,4 @@
-import { useState, useEffect, useContext, lazy, Suspense } from 'react';
+import { useState, useEffect, useContext, useRef, lazy, Suspense } from 'react';
 import { getVersion } from '@tauri-apps/api/app';
 import { openUrl } from '@tauri-apps/plugin-opener';
 import { AudioProvider, AudioContext } from './context/AudioContext';
@@ -24,7 +24,7 @@ import { useStats } from './hooks/useStats';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { UpdateBanner } from './components/UpdateBanner';
 import { useSettings } from './hooks/useSettings';
-import { setAudioQuality } from './services/youtube';
+import { setAudioQuality, subscribeToProgress, seekTo } from './services/youtube';
 import './App.css';
 
 type View = 'search' | 'videos' | 'favorites' | 'radio' | 'settings' | 'downloaded' | 'playlists' | 'archive' | 'jamendo' | 'stats';
@@ -42,7 +42,7 @@ function App() {
   const { settings, update: updateSettings } = useSettings();
 
   // Resizable panels (persisted)
-  const [sidebarWidth, setSidebarWidth] = useState(() => clamp(numFromLS('auraplay_sidebar_w', 268), 210, 460));
+  const [sidebarWidth, setSidebarWidth] = useState(() => clamp(numFromLS('auraplay_sidebar_w2', 222), 196, 460));
   const [playerHeight, setPlayerHeight] = useState(() => clamp(numFromLS('auraplay_player_h', 110), 96, 240));
   const [appVersion, setAppVersion] = useState('');
   const { summary: statsSummary } = useStats();
@@ -56,13 +56,13 @@ function App() {
     const startX = e.clientX, startW = sidebarWidth;
     document.body.style.cursor = 'col-resize';
     document.body.style.userSelect = 'none';
-    const move = (ev: PointerEvent) => setSidebarWidth(clamp(startW + (ev.clientX - startX), 210, 460));
+    const move = (ev: PointerEvent) => setSidebarWidth(clamp(startW + (ev.clientX - startX), 196, 460));
     const up = () => {
       document.removeEventListener('pointermove', move);
       document.removeEventListener('pointerup', up);
       document.body.style.cursor = '';
       document.body.style.userSelect = '';
-      setSidebarWidth(w => { localStorage.setItem('auraplay_sidebar_w', String(w)); return w; });
+      setSidebarWidth(w => { localStorage.setItem('auraplay_sidebar_w2', String(w)); return w; });
     };
     document.addEventListener('pointermove', move);
     document.addEventListener('pointerup', up);
@@ -113,7 +113,7 @@ function App() {
             </div>
 
             {/* Logo — crisp iridescent glass tile + play mark */}
-            <div className="px-6 pt-7 pb-6 flex items-center gap-3.5">
+            <div className="px-5 pt-7 pb-6 flex items-center gap-3">
               <div className="relative flex-shrink-0">
                 {/* soft glow sits behind the tile so the mark itself stays sharp */}
                 <div className="absolute -inset-1.5 rounded-[18px] opacity-55 pointer-events-none"
@@ -261,6 +261,9 @@ function App() {
           onResizeStart={startPlayerResize}
         />
 
+        {/* Global keyboard shortcuts */}
+        <KeyboardShortcuts />
+
         {/* Music-video overlay — sits above the transport bar so the bar stays usable */}
         <VideoOverlayHost playerHeight={playerHeight} />
 
@@ -272,6 +275,39 @@ function App() {
       </div>
     </AudioProvider>
   );
+}
+
+/* Global keyboard shortcuts — ignored while typing in inputs.
+   Space play/pause · ←/→ seek 5s · ↑/↓ volume · M mute · N/P next/prev */
+function KeyboardShortcuts() {
+  const ctx = useContext(AudioContext);
+  const timeRef = useRef({ ct: 0, dur: 0 });
+  const prevVolRef = useRef(70);
+  useEffect(() => subscribeToProgress((ct, dur) => { timeRef.current = { ct, dur }; }), []);
+  useEffect(() => {
+    if (!ctx) return;
+    const onKey = (e: KeyboardEvent) => {
+      const t = e.target as HTMLElement | null;
+      if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return;
+      const { ct, dur } = timeRef.current;
+      switch (e.key) {
+        case ' ': case 'k': case 'K': e.preventDefault(); ctx.togglePlay(); break;
+        case 'ArrowRight': e.preventDefault(); seekTo(Math.min(dur || Infinity, ct + 5)); break;
+        case 'ArrowLeft':  e.preventDefault(); seekTo(Math.max(0, ct - 5)); break;
+        case 'ArrowUp':    e.preventDefault(); ctx.setVolume(Math.min(100, ctx.volume + 5)); break;
+        case 'ArrowDown':  e.preventDefault(); ctx.setVolume(Math.max(0, ctx.volume - 5)); break;
+        case 'm': case 'M':
+          if (ctx.volume > 0) { prevVolRef.current = ctx.volume; ctx.setVolume(0); }
+          else ctx.setVolume(prevVolRef.current || 70);
+          break;
+        case 'n': case 'N': ctx.nextTrack(); break;
+        case 'p': case 'P': ctx.prevTrack(); break;
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [ctx]);
+  return null;
 }
 
 /* Renders the music-video overlay from context, stopping above the transport bar. */

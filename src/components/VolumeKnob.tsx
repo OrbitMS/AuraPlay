@@ -12,21 +12,33 @@ interface Props {
  * change the value. Maps 0–100 onto a −135°…+135° sweep (the classic analog throw).
  */
 export const VolumeKnob: React.FC<Props> = ({ value, onChange, size = 96, label }) => {
-  const startRef = useRef<{ y: number; v: number } | null>(null);
+  const draggingRef = useRef(false);
   const clamp = (v: number) => Math.min(100, Math.max(0, v));
   const angle = -135 + (clamp(value) / 100) * 270;
 
+  // Map a pointer position (relative to the knob centre) to a 0–100 value along
+  // the −135°…+135° arc — so the knob turns to follow the mouse like a real dial.
+  const valueFromPointer = (el: HTMLElement, clientX: number, clientY: number) => {
+    const r = el.getBoundingClientRect();
+    const dx = clientX - (r.left + r.width / 2);
+    const dy = clientY - (r.top + r.height / 2);
+    let deg = Math.atan2(dx, -dy) * 180 / Math.PI; // 0 = up, clockwise positive
+    if (deg < -135) deg = -135;
+    if (deg > 135) deg = 135;
+    return clamp(Math.round(((deg + 135) / 270) * 100));
+  };
+
   const onDown = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
     e.currentTarget.setPointerCapture(e.pointerId);
-    startRef.current = { y: e.clientY, v: value };
-  }, [value]);
+    draggingRef.current = true;
+    onChange(valueFromPointer(e.currentTarget, e.clientX, e.clientY));
+  }, [onChange]);
   const onMove = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
-    if (!startRef.current) return;
-    const dy = startRef.current.y - e.clientY;     // up = louder
-    onChange(clamp(Math.round(startRef.current.v + dy * 0.6)));
+    if (!draggingRef.current) return;
+    onChange(valueFromPointer(e.currentTarget, e.clientX, e.clientY));
   }, [onChange]);
   const onUp = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
-    startRef.current = null;
+    draggingRef.current = false;
     try { e.currentTarget.releasePointerCapture(e.pointerId); } catch { /* noop */ }
   }, []);
   const onWheel = useCallback((e: React.WheelEvent<HTMLDivElement>) => {
