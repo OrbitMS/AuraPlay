@@ -7,8 +7,12 @@ Finally, bring the power of Music to your workstation. Enjoy the seamless music 
 Download latest Version on the right (.exe) -> install and enjoy!
 
 ---
+<img width="960" height="487" alt="image" src="https://github.com/user-attachments/assets/e62abd6a-d082-4d5d-aacb-0ab043ff088f" />
+<img width="960" height="487" alt="image" src="https://github.com/user-attachments/assets/a6a5d9c7-1fa1-49df-8577-958ede173643" />
 
-<img width="960" height="487" alt="image" src="https://github.com/user-attachments/assets/f977536a-66e0-42fd-83a1-ed62c59c7550" /> <img width="960" height="487" alt="image" src="https://github.com/user-attachments/assets/c5b920d2-67d3-40b9-bbb2-bd188a998111" />
+
+
+
 
 
 
