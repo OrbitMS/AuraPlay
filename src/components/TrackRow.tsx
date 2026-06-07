@@ -54,10 +54,10 @@ export const TrackRow: React.FC<Props> = ({
       )}
 
       {/* Cover */}
-      <div className="relative w-12 h-12 rounded-[7px] overflow-hidden flex-shrink-0"
-        style={{ background: 'var(--s2)', border: `1px solid ${active ? 'var(--gold-d)' : 'var(--bd)'}` }}>
+      <div className="relative w-12 h-12 rounded-[8px] overflow-hidden flex-shrink-0"
+        style={{ background: 'var(--s2)', border: `1px solid ${active ? 'var(--gold-d)' : 'var(--bd)'}`, boxShadow: active ? '0 0 0 1px var(--gold-d), 0 4px 14px var(--gold-g)' : 'none' }}>
         {thumbnail
-          ? <img src={safeImageUrl(thumbnail)} alt="" className="w-full h-full object-cover" />
+          ? <img src={safeImageUrl(thumbnail)} alt="" className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-[1.08]" />
           : <div className="w-full h-full flex items-center justify-center"><Music2 size={16} className="text-[var(--tt)]" /></div>}
         {index === undefined && (
           <div className="trow-hover absolute inset-0 flex items-center justify-center" style={{ background: 'rgba(0,0,0,0.45)' }}>

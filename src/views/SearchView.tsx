@@ -6,6 +6,7 @@ import { useHistory } from '../hooks/useHistory';
 import { HomeContent } from '../components/HomeContent';
 import { AddToPlaylistButton } from '../components/AddToPlaylistButton';
 import { TrackRow } from '../components/TrackRow';
+import { PageHeader } from '../components/PageHeader';
 import { rankSearchResults } from '../lib/rankResults';
 import { Search, Download, CheckCircle, Loader, Heart, Minus, Plus } from 'lucide-react';
 
@@ -95,8 +96,7 @@ export const SearchView: React.FC = () => {
       <div className="px-[36px] pt-[32px] pb-[40px] transition-transform duration-150"
         style={{ transform: `scale(${zoom})`, transformOrigin: 'top left', width: `${100 / zoom}%` }}>
         {/* Page heading */}
-        <h1 className="text-[28px] text-[var(--tp)] tracking-[-0.01em] leading-[1.1]" style={{ fontFamily: 'var(--fd)' }}>Discover Music</h1>
-        <div className="text-[10px] text-[var(--tt)] mt-1.5 tracking-[0.08em] uppercase" style={{ fontFamily: 'var(--fm)' }}>Search · Stream · Explore</div>
+        <PageHeader eyebrow="Discover" title="Discover Music" subtitle="Search, stream and explore millions of tracks" />
 
       {/* Search row — large & prominent, constrained width */}
       <form onSubmit={handleSearch} className="flex gap-3 mt-7 mb-8" style={{ maxWidth: 560 }}>

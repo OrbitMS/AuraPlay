@@ -150,20 +150,15 @@ export const AudioPlayerBar: React.FC<Props> = ({ onQueueToggle, queueOpen, onEx
           </>
         ) : currentTrack ? (
           <>
-            {/* Vinyl disc */}
-            <div className="flex-shrink-0 rounded-full relative overflow-hidden"
-              style={{ width: 62, height: 62, border: '2px solid var(--gold-d)', boxShadow: isPlaying ? '0 0 20px var(--gold-d)' : 'none', transition: 'box-shadow 0.4s' }}>
-              <img
-                src={safeImageUrl(currentTrack.thumbnail)}
-                alt=""
-                className={`w-full h-full object-cover rounded-full ${isPlaying ? 'animate-spin-slow' : ''}`}
-              />
-              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[11px] h-[11px] rounded-full"
-                style={{ background: 'var(--obsidian)', border: '1.5px solid var(--gold-d)' }} />
+            {/* Album tile */}
+            <div className="flex-shrink-0 rounded-[12px] relative overflow-hidden"
+              style={{ width: 60, height: 60, border: '1px solid rgba(255,255,255,0.12)', boxShadow: isPlaying ? '0 6px 22px var(--gold-g), 0 0 0 1px var(--gold-d)' : '0 4px 12px rgba(0,0,0,0.4)', transition: 'box-shadow 0.4s' }}>
+              <img src={safeImageUrl(currentTrack.thumbnail)} alt="" className="w-full h-full object-cover" />
+              <div className="absolute inset-0 pointer-events-none" style={{ background: 'linear-gradient(150deg, rgba(255,255,255,0.18) 0%, transparent 40%)' }} />
             </div>
             <div className="flex flex-col min-w-0 gap-1">
               <span className="text-[14px] font-semibold truncate" style={{ color: 'var(--tp)', letterSpacing: '0.005em' }}>{currentTrack.title}</span>
-              <span className="text-[11px] truncate" style={{ color: 'var(--gold)', fontFamily: 'var(--fm)', letterSpacing: '0.06em', textTransform: 'uppercase' }}>
+              <span className="text-[12px] truncate" style={{ color: 'var(--ts)' }}>
                 {currentTrack.artist || 'Unknown Artist'}
               </span>
             </div>
